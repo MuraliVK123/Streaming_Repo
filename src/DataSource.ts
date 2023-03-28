@@ -73,15 +73,15 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
           frame.add(jsonData);
           //console.log(Object.values([Object.values(frame.fields[0].values)])[0][0][0]['value']);
        
-          let test:any = [];
-          test.push(Object.values(frame.fields[0].values)[0]);
-          console.log(test);
-          console.log(Object.values(frame.fields[0].values));
+          let data:any = [];
+          data.push(Object.values(frame.fields[0].values)[0]);
+          //console.log(test);
+          //console.log(Object.values(frame.fields[0].values));
           //console.log(Object.values(frame.fields[0].values)[0][0]['value']);
           subscriber.next({
             //data:  [toDataFrame(frame.fields)],
             //data:  [Object.values(frame.fields[0].values)],
-            data: test,
+            data: data,
             key: query.refId,
             state: LoadingState.Streaming,
           });

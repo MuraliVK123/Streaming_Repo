@@ -2350,15 +2350,15 @@ function (_super) {
           ;
           frame.add(jsonData); //console.log(Object.values([Object.values(frame.fields[0].values)])[0][0][0]['value']);
 
-          var test = [];
-          test.push(Object.values(frame.fields[0].values)[0]);
-          console.log(test);
-          console.log(Object.values(frame.fields[0].values)); //console.log(Object.values(frame.fields[0].values)[0][0]['value']);
+          var data = [];
+          data.push(Object.values(frame.fields[0].values)[0]); //console.log(test);
+          //console.log(Object.values(frame.fields[0].values));
+          //console.log(Object.values(frame.fields[0].values)[0][0]['value']);
 
           subscriber.next({
             //data:  [toDataFrame(frame.fields)],
             //data:  [Object.values(frame.fields[0].values)],
-            data: test,
+            data: data,
             key: query.refId,
             state: _grafana_data__WEBPACK_IMPORTED_MODULE_2__["LoadingState"].Streaming
           });
