@@ -2327,8 +2327,7 @@ function (_super) {
 
         connection.onmessage = function (event) {
           var jsonData = JSON.parse(event.data);
-          console.log(jsonData);
-          console.log(jsonData['VPP.Connect::Model.wind[1].longitude.value'].value);
+          console.log(jsonData); //console.log(jsonData['VPP.Connect::Model.wind[1].longitude.value'].value);
 
           if (frame.fields.length <= 1) {
             //first time initalize the keys from the json data
@@ -2397,7 +2396,7 @@ function (_super) {
         /*return*/
         , {
           status: 'success',
-          message: 'Success'
+          message: 'Data source tests - Success'
         }];
       });
     });

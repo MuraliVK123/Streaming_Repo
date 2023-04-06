@@ -54,7 +54,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         connection.onmessage = (event: any) => {
           var jsonData = JSON.parse(event.data);
           console.log(jsonData);
-          console.log(jsonData['VPP.Connect::Model.wind[1].longitude.value'].value);
+          //console.log(jsonData['VPP.Connect::Model.wind[1].longitude.value'].value);
 
                
           if (frame.fields.length <= 1) {
@@ -121,7 +121,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     // TODO: Implement a health check for your data source.
     return {
       status: 'success',
-      message: 'Success',
+      message: 'Data source tests - Success',
     };
   }
 }
