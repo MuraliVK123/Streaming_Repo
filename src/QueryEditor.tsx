@@ -47,11 +47,11 @@ export class QueryEditor extends PureComponent<Props> {
             inputWidth={10}
             value={server}
             onChange={this.onServerChange}
-            label="signal"
+            label="Server"
             tooltip="If not used the default server is used. Format: ws://SERVER:PORT"
           />
         </div>
-        <div className="gf-form" hidden>
+        <div className="gf-form">
           <FormField
             label="Capacity"
             tooltip="Max. values"
@@ -62,7 +62,7 @@ export class QueryEditor extends PureComponent<Props> {
             type="number"
           />
         </div>
-        <div className="gf-form" hidden>
+        <div className="gf-form">
           <FormField
             label="Server Timeout (seconds)"
             labelWidth={13}
@@ -71,7 +71,6 @@ export class QueryEditor extends PureComponent<Props> {
             value={timeoutS}
             onChange={this.onTimeoutChange}
             type="number"
-            hidden
           />
         </div>
       </div>
