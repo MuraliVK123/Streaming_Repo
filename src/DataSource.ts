@@ -23,8 +23,6 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
     this.serverURL = instanceSettings.jsonData.url || 'ws://localhost:8181';
 
-    
-
   }
 
   query(options: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
@@ -42,9 +40,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         console.log(frame);
 
         const timeout = query.timeoutS > 0 ? query.timeoutS * 1000 / 2 : 0;//PingSend = ServerTimeout / 2
-        let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
+        const server = query.server || this.serverURL;
         const connection = new WebSocket(server);
-        let interval: NodeJS.Timeout;
+        var interval: NodeJS.Timeout;
         frame.refId = query.refId;
 
         connection.onerror = (error: any) => {
@@ -54,40 +52,33 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         };
 
         connection.onmessage = (event: any) => {
-          let jsonData = JSON.parse(event.data);
+          var jsonData = JSON.parse(event.data);
           console.log(jsonData);
-          let finalData = jsonData[query.server ? query.server : 0]
-
           //console.log(jsonData['VPP.Connect::Model.wind[1].longitude.value'].value);
 
                
           if (frame.fields.length <= 1) {
             //first time initalize the keys from the json data
-            Object.keys(finalData).forEach(function (k) {
+            Object.keys(jsonData).forEach(function (k) {
               if (k === "timestamp") {
                 frame.addField({ name: k, type: FieldType.time });
-              } else if(k === "value") {
+              } else {
                 frame.addField({ name: k, type: FieldType.number });
-              }else if(k === "name") {
-                frame.addField({ name: k, type: FieldType.name });
               }
 
             });
           };
           
 
-          frame.add(finalData);
-          //console.log(Object.values([Object.values(frame.fields[0].values)])[0][0][0]['value']);
+          frame.add(jsonData);
        
-          // let data: any = [];
-          // data.push(Object.values(frame.fields[0].values)[0]);
-          //console.log(test);
-          //console.log(Object.values(frame.fields[0].values));
-          //console.log(Object.values(frame.fields[0].values)[0][0]['value']);
+          let data:any = [];
+          data.push(Object.values(frame.fields[0].values)[0]);
+   
           subscriber.next({
             //data:  [toDataFrame(frame.fields)],
             //data:  [Object.values(frame.fields[0].values)],
-            data: [frame],
+            data: data,
             key: query.refId,
             state: LoadingState.Streaming,
           });
