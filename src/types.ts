@@ -5,11 +5,21 @@ export interface MyQuery extends DataQuery {
   server?: string;
   capacity: number;
   timeoutS: number;
+  dataType?: string;
+  IsDisplayName?: boolean;
+  aliasName?: string;
+  scale?: string;
+  pattern?: string;
+  selectedSignals: any
+  
 }
 
 export const defaultQuery: Partial<MyQuery> = {
   capacity: 1000,
-  timeoutS: 30
+  timeoutS: 30,
+  IsDisplayName : false,
+ // dataType : "Streaming"
+
   //server: "ws://test:8080",
 };
 
