@@ -128,6 +128,8 @@ function _toPrimitive(input, hint) { if (_typeof(input) !== "object" || input ==
 
 
 
+//import { TimeSeries } from '@grafana/ui';
+
 var DataSource = /*#__PURE__*/function (_DataSourceApi) {
   _inherits(DataSource, _DataSourceApi);
   var _super = _createSuper(DataSource);
@@ -142,24 +144,42 @@ var DataSource = /*#__PURE__*/function (_DataSourceApi) {
   _createClass(DataSource, [{
     key: "query",
     value: function query(options) {
-      var _this2 = this,
-        _console;
+      var _console;
       var observables = options.targets.map(function (target) {
+        // let min = options.range.from.valueOf();
+        // let max = options.range.to.valueOf();
+        // let order = "asc"
         var query = lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default()(target, _types__WEBPACK_IMPORTED_MODULE_4__.defaultQuery);
+        query.server = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.server, options.scopedVars);
+        // query.dataType = getTemplateSrv().replace(query.dataType, options.scopedVars)
+        // query.IsDisplayName = Boolean(getTemplateSrv().replace(query.IsDisplayName ? String(query.IsDisplayName) : "false", options.scopedVars))
+        query.server = query.server ? query.server : "";
+        console.log("Query" + query);
         return new rxjs__WEBPACK_IMPORTED_MODULE_3__.Observable(function (subscriber) {
-          query.timeoutS = parseFloat((0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.timeoutS.toString(), options.scopedVars));
-          query.server = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.server, options.scopedVars);
-          query.capacity = parseFloat((0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.capacity.toString(), options.scopedVars));
-          var frame = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-            append: 'tail',
-            capacity: query.capacity || 1000
-          });
-          console.log(frame);
-          var timeout = query.timeoutS > 0 ? query.timeoutS * 1000 / 2 : 0; //PingSend = ServerTimeout / 2
-          var server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || 0;
+          //query.capacity =  parseFloat(getTemplateSrv().replace(query.capacity.toString(), options.scopedVars))
+
+          //const frame1 : TimeSeries;
+          var signalString = "";
+          var dataField = [];
+          //console.log(frame);
+          query.selectedSignals = query.selectedSignals ? query.selectedSignals : [];
+          var signalArray = query.selectedSignals;
+          if (query.selectedSignals.length > 0) {
+            dataField.push("timestamp");
+            signalArray.map(function (sig) {
+              signalString = signalString + "&signal=" + sig;
+              dataField.push(sig);
+            });
+          }
+          var isStreaming = false;
+          var streamingData;
+          //let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
+
+          var server = "wss://10.171.111.43/api/realtime/live?db=global" + signalString;
           var connection = new WebSocket(server);
           var interval;
-          frame.refId = query.refId;
+          // frame.refId = query.refId;
+
           connection.onerror = function (error) {
             console.error("WebSocket error: ".concat(JSON.stringify(error)));
             clearInterval(interval);
@@ -169,62 +189,74 @@ var DataSource = /*#__PURE__*/function (_DataSourceApi) {
           connection.onmessage = function (event) {
             var jsonData = JSON.parse(event.data);
             console.log(jsonData);
-            var finalData = jsonData[query.server ? query.server : 0];
-
-            //console.log(jsonData['VPP.Connect::Model.wind[1].longitude.value'].value);
-
-            if (frame.fields.length <= 1) {
-              //first time initalize the keys from the json data
-              Object.keys(finalData).forEach(function (k) {
-                if (k === "timestamp") {
-                  frame.addField({
-                    name: k,
-                    type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                  });
-                } else if (k === "value") {
-                  frame.addField({
-                    name: k,
-                    type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number
-                  });
-                } else if (k === "name") {
-                  frame.addField({
-                    name: k,
-                    type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.name
+            //let finalData = jsonData[query.server ? query.server : 0]
+            var finalData = jsonData;
+            console.log("finaldata" + finalData);
+            var frameData = [];
+            var aliasName;
+            if (query.aliasName) {
+              aliasName = query.aliasName;
+            }
+            if (!isStreaming) {
+              streamingData = finalData;
+              isStreaming = true;
+            }
+            console.log("alias" + aliasName);
+            var count = 0;
+            signalArray.map(function (sig) {
+              if (sig !== "timestamp" && streamingData[sig] !== undefined) {
+                frameData = {};
+                var value = finalData[sig] === undefined ? streamingData[sig].value : finalData[sig].value;
+                frameData["timestamp"] = finalData[sig] === undefined ? streamingData[sig].timestamp : finalData[sig].timestamp;
+                if (query.scale !== undefined && Number(query.scale) > 0) {
+                  value = value * Number(query.scale);
+                }
+                if (finalData[sig] !== undefined && isStreaming) {
+                  streamingData[sig] = finalData[sig];
+                }
+                if (signalArray.length === 1 && query.aliasName !== undefined && aliasName !== undefined) {
+                  frameData[aliasName] = value;
+                } else {
+                  frameData[sig] = value;
+                }
+                var frame = {};
+                frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
+                  append: 'tail',
+                  capacity: query.capacity || 1000
+                });
+                if (frame["frame" + count].fields.length <= 1) {
+                  //first time initalize the keys from the json data
+                  Object.keys(frameData).forEach(function (k) {
+                    if (k === "timestamp") {
+                      frame["frame" + count].addField({
+                        name: k,
+                        type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
+                      });
+                    } else {
+                      frame["frame" + count].addField({
+                        name: k,
+                        type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
+                      });
+                    }
                   });
                 }
-              });
-            }
-            ;
-            frame.add(finalData);
-            //console.log(Object.values([Object.values(frame.fields[0].values)])[0][0][0]['value']);
-
-            // let data: any = [];
-            // data.push(Object.values(frame.fields[0].values)[0]);
-            //console.log(test);
-            //console.log(Object.values(frame.fields[0].values));
-            //console.log(Object.values(frame.fields[0].values)[0][0]['value']);
-            subscriber.next({
-              //data:  [toDataFrame(frame.fields)],
-              //data:  [Object.values(frame.fields[0].values)],
-              data: [frame],
-              key: query.refId,
-              state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+                ;
+                frame["frame" + count].add(frameData);
+                subscriber.next({
+                  //data:  [toDataFrame(frame.fields)],
+                  //data:  [Object.values(frame.fields[0].values)],
+                  data: [frame["frame" + count]],
+                  key: query.refId + count,
+                  state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+                });
+                count = count + 1;
+              }
             });
           };
           connection.onclose = function (ev) {
             console.log("WebSocket closed: " + ev.reason);
             clearInterval(interval);
           };
-          if (timeout > 0) {
-            console.log("Ping Timeout: " + timeout);
-            interval = setInterval(function ping() {
-              if (connection.readyState === 1) {
-                connection.send("ping");
-              } else if (connection.readyState > 1) {
-                clearInterval(interval);
-              }
-            }, timeout);
-          }
           return function () {
             connection.close(1000, "Dashboard closed");
           };
@@ -234,21 +266,55 @@ var DataSource = /*#__PURE__*/function (_DataSourceApi) {
       return rxjs__WEBPACK_IMPORTED_MODULE_3__.merge.apply(void 0, _toConsumableArray(observables));
     }
   }, {
-    key: "testDatasource",
+    key: "doRequest",
     value: function () {
-      var _testDatasource = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      var _doRequest = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(options) {
+        var logData;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
-              return _context.abrupt("return", {
+              logData = [];
+              _context.next = 3;
+              return fetch("https://10.140.133.144/api/realtime/log?db=global&signal=" + options + ":ResultsLog").then(function (response) {
+                return response.json();
+              }).then(function (data) {
+                logData = data;
+                return logData.map(function (row) {
+                  return {
+                    time: row.timestamp,
+                    value: row.value
+                  };
+                });
+              })["catch"](function (error) {
+                return console.error(error);
+              });
+            case 3:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee);
+      }));
+      function doRequest(_x) {
+        return _doRequest.apply(this, arguments);
+      }
+      return doRequest;
+    }()
+  }, {
+    key: "testDatasource",
+    value: function () {
+      var _testDatasource = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
+            case 0:
+              return _context2.abrupt("return", {
                 status: 'success',
                 message: 'Data source tests - Success'
               });
             case 1:
             case "end":
-              return _context.stop();
+              return _context2.stop();
           }
-        }, _callee);
+        }, _callee2);
       }));
       function testDatasource() {
         return _testDatasource.apply(this, arguments);
@@ -276,10 +342,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash_defaults__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react */ "react");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _grafana_ui__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @grafana/ui */ "@grafana/ui");
-/* harmony import */ var _grafana_ui__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_grafana_ui__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _types__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./types */ "./types.ts");
+/* harmony import */ var _QueryEditor_css__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./QueryEditor.css */ "./QueryEditor.css");
+/* harmony import */ var _grafana_ui__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @grafana/ui */ "@grafana/ui");
+/* harmony import */ var _grafana_ui__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_grafana_ui__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _types__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./types */ "./types.ts");
+var _label, _label2, _label3, _label4, _label5, _label6;
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return exports; }; var exports = {}, Op = Object.prototype, hasOwn = Op.hasOwnProperty, defineProperty = Object.defineProperty || function (obj, key, desc) { obj[key] = desc.value; }, $Symbol = "function" == typeof Symbol ? Symbol : {}, iteratorSymbol = $Symbol.iterator || "@@iterator", asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator", toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag"; function define(obj, key, value) { return Object.defineProperty(obj, key, { value: value, enumerable: !0, configurable: !0, writable: !0 }), obj[key]; } try { define({}, ""); } catch (err) { define = function define(obj, key, value) { return obj[key] = value; }; } function wrap(innerFn, outerFn, self, tryLocsList) { var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator, generator = Object.create(protoGenerator.prototype), context = new Context(tryLocsList || []); return defineProperty(generator, "_invoke", { value: makeInvokeMethod(innerFn, self, context) }), generator; } function tryCatch(fn, obj, arg) { try { return { type: "normal", arg: fn.call(obj, arg) }; } catch (err) { return { type: "throw", arg: err }; } } exports.wrap = wrap; var ContinueSentinel = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var IteratorPrototype = {}; define(IteratorPrototype, iteratorSymbol, function () { return this; }); var getProto = Object.getPrototypeOf, NativeIteratorPrototype = getProto && getProto(getProto(values([]))); NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol) && (IteratorPrototype = NativeIteratorPrototype); var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype); function defineIteratorMethods(prototype) { ["next", "throw", "return"].forEach(function (method) { define(prototype, method, function (arg) { return this._invoke(method, arg); }); }); } function AsyncIterator(generator, PromiseImpl) { function invoke(method, arg, resolve, reject) { var record = tryCatch(generator[method], generator, arg); if ("throw" !== record.type) { var result = record.arg, value = result.value; return value && "object" == _typeof(value) && hasOwn.call(value, "__await") ? PromiseImpl.resolve(value.__await).then(function (value) { invoke("next", value, resolve, reject); }, function (err) { invoke("throw", err, resolve, reject); }) : PromiseImpl.resolve(value).then(function (unwrapped) { result.value = unwrapped, resolve(result); }, function (error) { return invoke("throw", error, resolve, reject); }); } reject(record.arg); } var previousPromise; defineProperty(this, "_invoke", { value: function value(method, arg) { function callInvokeWithMethodAndArg() { return new PromiseImpl(function (resolve, reject) { invoke(method, arg, resolve, reject); }); } return previousPromise = previousPromise ? previousPromise.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(innerFn, self, context) { var state = "suspendedStart"; return function (method, arg) { if ("executing" === state) throw new Error("Generator is already running"); if ("completed" === state) { if ("throw" === method) throw arg; return doneResult(); } for (context.method = method, context.arg = arg;;) { var delegate = context.delegate; if (delegate) { var delegateResult = maybeInvokeDelegate(delegate, context); if (delegateResult) { if (delegateResult === ContinueSentinel) continue; return delegateResult; } } if ("next" === context.method) context.sent = context._sent = context.arg;else if ("throw" === context.method) { if ("suspendedStart" === state) throw state = "completed", context.arg; context.dispatchException(context.arg); } else "return" === context.method && context.abrupt("return", context.arg); state = "executing"; var record = tryCatch(innerFn, self, context); if ("normal" === record.type) { if (state = context.done ? "completed" : "suspendedYield", record.arg === ContinueSentinel) continue; return { value: record.arg, done: context.done }; } "throw" === record.type && (state = "completed", context.method = "throw", context.arg = record.arg); } }; } function maybeInvokeDelegate(delegate, context) { var methodName = context.method, method = delegate.iterator[methodName]; if (undefined === method) return context.delegate = null, "throw" === methodName && delegate.iterator["return"] && (context.method = "return", context.arg = undefined, maybeInvokeDelegate(delegate, context), "throw" === context.method) || "return" !== methodName && (context.method = "throw", context.arg = new TypeError("The iterator does not provide a '" + methodName + "' method")), ContinueSentinel; var record = tryCatch(method, delegate.iterator, context.arg); if ("throw" === record.type) return context.method = "throw", context.arg = record.arg, context.delegate = null, ContinueSentinel; var info = record.arg; return info ? info.done ? (context[delegate.resultName] = info.value, context.next = delegate.nextLoc, "return" !== context.method && (context.method = "next", context.arg = undefined), context.delegate = null, ContinueSentinel) : info : (context.method = "throw", context.arg = new TypeError("iterator result is not an object"), context.delegate = null, ContinueSentinel); } function pushTryEntry(locs) { var entry = { tryLoc: locs[0] }; 1 in locs && (entry.catchLoc = locs[1]), 2 in locs && (entry.finallyLoc = locs[2], entry.afterLoc = locs[3]), this.tryEntries.push(entry); } function resetTryEntry(entry) { var record = entry.completion || {}; record.type = "normal", delete record.arg, entry.completion = record; } function Context(tryLocsList) { this.tryEntries = [{ tryLoc: "root" }], tryLocsList.forEach(pushTryEntry, this), this.reset(!0); } function values(iterable) { if (iterable) { var iteratorMethod = iterable[iteratorSymbol]; if (iteratorMethod) return iteratorMethod.call(iterable); if ("function" == typeof iterable.next) return iterable; if (!isNaN(iterable.length)) { var i = -1, next = function next() { for (; ++i < iterable.length;) if (hasOwn.call(iterable, i)) return next.value = iterable[i], next.done = !1, next; return next.value = undefined, next.done = !0, next; }; return next.next = next; } } return { next: doneResult }; } function doneResult() { return { value: undefined, done: !0 }; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, defineProperty(Gp, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), defineProperty(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction"), exports.isGeneratorFunction = function (genFun) { var ctor = "function" == typeof genFun && genFun.constructor; return !!ctor && (ctor === GeneratorFunction || "GeneratorFunction" === (ctor.displayName || ctor.name)); }, exports.mark = function (genFun) { return Object.setPrototypeOf ? Object.setPrototypeOf(genFun, GeneratorFunctionPrototype) : (genFun.__proto__ = GeneratorFunctionPrototype, define(genFun, toStringTagSymbol, "GeneratorFunction")), genFun.prototype = Object.create(Gp), genFun; }, exports.awrap = function (arg) { return { __await: arg }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, asyncIteratorSymbol, function () { return this; }), exports.AsyncIterator = AsyncIterator, exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) { void 0 === PromiseImpl && (PromiseImpl = Promise); var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl); return exports.isGeneratorFunction(outerFn) ? iter : iter.next().then(function (result) { return result.done ? result.value : iter.next(); }); }, defineIteratorMethods(Gp), define(Gp, toStringTagSymbol, "Generator"), define(Gp, iteratorSymbol, function () { return this; }), define(Gp, "toString", function () { return "[object Generator]"; }), exports.keys = function (val) { var object = Object(val), keys = []; for (var key in object) keys.push(key); return keys.reverse(), function next() { for (; keys.length;) { var key = keys.pop(); if (key in object) return next.value = key, next.done = !1, next; } return next.done = !0, next; }; }, exports.values = values, Context.prototype = { constructor: Context, reset: function reset(skipTempReset) { if (this.prev = 0, this.next = 0, this.sent = this._sent = undefined, this.done = !1, this.delegate = null, this.method = "next", this.arg = undefined, this.tryEntries.forEach(resetTryEntry), !skipTempReset) for (var name in this) "t" === name.charAt(0) && hasOwn.call(this, name) && !isNaN(+name.slice(1)) && (this[name] = undefined); }, stop: function stop() { this.done = !0; var rootRecord = this.tryEntries[0].completion; if ("throw" === rootRecord.type) throw rootRecord.arg; return this.rval; }, dispatchException: function dispatchException(exception) { if (this.done) throw exception; var context = this; function handle(loc, caught) { return record.type = "throw", record.arg = exception, context.next = loc, caught && (context.method = "next", context.arg = undefined), !!caught; } for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i], record = entry.completion; if ("root" === entry.tryLoc) return handle("end"); if (entry.tryLoc <= this.prev) { var hasCatch = hasOwn.call(entry, "catchLoc"), hasFinally = hasOwn.call(entry, "finallyLoc"); if (hasCatch && hasFinally) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } else if (hasCatch) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); } else { if (!hasFinally) throw new Error("try statement without catch or finally"); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } } } }, abrupt: function abrupt(type, arg) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) { var finallyEntry = entry; break; } } finallyEntry && ("break" === type || "continue" === type) && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc && (finallyEntry = null); var record = finallyEntry ? finallyEntry.completion : {}; return record.type = type, record.arg = arg, finallyEntry ? (this.method = "next", this.next = finallyEntry.finallyLoc, ContinueSentinel) : this.complete(record); }, complete: function complete(record, afterLoc) { if ("throw" === record.type) throw record.arg; return "break" === record.type || "continue" === record.type ? this.next = record.arg : "return" === record.type ? (this.rval = this.arg = record.arg, this.method = "return", this.next = "end") : "normal" === record.type && afterLoc && (this.next = afterLoc), ContinueSentinel; }, finish: function finish(finallyLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.finallyLoc === finallyLoc) return this.complete(entry.completion, entry.afterLoc), resetTryEntry(entry), ContinueSentinel; } }, "catch": function _catch(tryLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc === tryLoc) { var record = entry.completion; if ("throw" === record.type) { var thrown = record.arg; resetTryEntry(entry); } return thrown; } } throw new Error("illegal catch attempt"); }, delegateYield: function delegateYield(iterable, resultName, nextLoc) { return this.delegate = { iterator: values(iterable), resultName: resultName, nextLoc: nextLoc }, "next" === this.method && (this.arg = undefined), ContinueSentinel; } }, exports; }
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 function _extends() { _extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor); } }
@@ -298,98 +369,265 @@ function _toPrimitive(input, hint) { if (_typeof(input) !== "object" || input ==
 
 
 
-var FormField = _grafana_ui__WEBPACK_IMPORTED_MODULE_2__.LegacyForms.FormField;
+
+//import Dropdown from 'react-bootstrap/Dropdown';
+//import DropdownButton from 'react-bootstrap/DropdownButton';
+
+//const { FormField} = LegacyForms;
+
+var options = ["", "Log", "Live"];
+var signalData = [];
+var Options = options.map(function (option) {
+  return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("option", {
+    key: option,
+    value: option
+  }, option);
+});
 var QueryEditor = /*#__PURE__*/function (_PureComponent) {
   _inherits(QueryEditor, _PureComponent);
   var _super = _createSuper(QueryEditor);
-  function QueryEditor() {
+  // onQueryTextChange = (event: ChangeEvent<HTMLInputElement>) => {
+  //   const { onChange, query } = this.props;
+  //   onChange({ ...query, queryText: event.target.value });
+  // };
+
+  function QueryEditor(Props) {
     var _this;
     _classCallCheck(this, QueryEditor);
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-    _this = _super.call.apply(_super, [this].concat(args));
-    // onQueryTextChange = (event: ChangeEvent<HTMLInputElement>) => {
-    //   const { onChange, query } = this.props;
-    //   onChange({ ...query, queryText: event.target.value });
-    // };
+    _this = _super.call(this, Props);
+    // let data = this.getSignals("Live");
+    // console.log(data);
+    // //this.getSignals("Live")
     _defineProperty(_assertThisInitialized(_this), "onServerChange", function (event) {
       var _this$props = _this.props,
         onChange = _this$props.onChange,
         query = _this$props.query,
         onRunQuery = _this$props.onRunQuery;
       onChange(_extends({}, query, {
-        server: event.target.value
+        server: event.value
       }));
+      if (query.pattern === undefined || query.pattern === "") {
+        onChange(_extends({}, query, {
+          server: event.value,
+          selectedSignals: [event.value]
+        }));
+      }
+      // let sArray: any[] = [];
+      // sArray.push(event.value);
+      // query.selectedSignals = sArray;
       // executes the query
       onRunQuery();
     });
-    _defineProperty(_assertThisInitialized(_this), "onCapacityChange", function (event) {
+    _defineProperty(_assertThisInitialized(_this), "onDisplayNameChange", function (event) {
       var _this$props2 = _this.props,
         onChange = _this$props2.onChange,
         query = _this$props2.query,
         onRunQuery = _this$props2.onRunQuery;
       onChange(_extends({}, query, {
-        capacity: parseInt(event.target.value, 10)
+        IsDisplayName: event.target.checked
       }));
       // executes the query
       onRunQuery();
     });
-    _defineProperty(_assertThisInitialized(_this), "onTimeoutChange", function (event) {
+    _defineProperty(_assertThisInitialized(_this), "onDataTypeChange", function (event) {
       var _this$props3 = _this.props,
         onChange = _this$props3.onChange,
         query = _this$props3.query,
         onRunQuery = _this$props3.onRunQuery;
       onChange(_extends({}, query, {
-        timeoutS: parseInt(event.target.value, 10)
+        dataType: event.target.value
+      }));
+      // executes the query
+      query.server = "";
+      _this.getSignals(event.target.value);
+      onRunQuery();
+    });
+    _defineProperty(_assertThisInitialized(_this), "onAliasnameChange", function (event) {
+      var _this$props4 = _this.props,
+        onChange = _this$props4.onChange,
+        query = _this$props4.query,
+        onRunQuery = _this$props4.onRunQuery;
+      onChange(_extends({}, query, {
+        aliasName: event.target.value
       }));
       // executes the query
       onRunQuery();
     });
+    _defineProperty(_assertThisInitialized(_this), "onScaleChange", function (event) {
+      var _this$props5 = _this.props,
+        onChange = _this$props5.onChange,
+        query = _this$props5.query,
+        onRunQuery = _this$props5.onRunQuery;
+      onChange(_extends({}, query, {
+        scale: event.target.value
+      }));
+      // executes the query
+      onRunQuery();
+    });
+    _defineProperty(_assertThisInitialized(_this), "onPatternChange", function (event) {
+      var _this$props6 = _this.props,
+        onChange = _this$props6.onChange,
+        query = _this$props6.query,
+        onRunQuery = _this$props6.onRunQuery;
+      //query.pattern = undefined;
+      var logData = [];
+      var pattern = "";
+      var type = query.dataType === "Log" ? "Log" : "Live";
+      onChange(_extends({}, query, {
+        pattern: event.target.value,
+        selectedSignals: logData
+      }));
+      if (event.target.value !== "") {
+        pattern = "@(" + event.target.value + ")";
+      }
+      //onRunQuery();
+      fetch("https://10.171.111.43/api/realtime/" + type + "/signals?pattern=" + pattern).then(function (response) {
+        return response.json();
+      }).then(function (data) {
+        logData = data;
+        if (data.status === "error") {
+          onChange(_extends({}, query, {
+            selectedSignals: [query.server],
+            pattern: event.target.value
+          }));
+          onRunQuery();
+        } else {
+          onChange(_extends({}, query, {
+            selectedSignals: logData,
+            pattern: event.target.value
+          }));
+          onRunQuery();
+        }
+      })["catch"](function (error) {
+        onChange(_extends({}, query, {
+          pattern: event.target.value,
+          selectedSignals: logData
+        }));
+        console.error(error);
+      });
+    });
     return _this;
   }
   _createClass(QueryEditor, [{
+    key: "getSignals",
+    value: function () {
+      var _getSignals = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(type) {
+        var logData;
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              signalData = [];
+              logData = [];
+              _context.next = 4;
+              return fetch("https://10.171.111.43/api/realtime/" + type + "/signals?pattern=*").then(function (response) {
+                return response.json();
+              }).then(function (data) {
+                signalData = [];
+                logData = data;
+                var slicesData = logData.slice(0, 25);
+                slicesData.map(function (option, i) {
+                  if (i < 25) {
+                    signalData.push({
+                      label: option,
+                      value: option
+                    });
+                  } else {
+                    return;
+                  }
+                });
+              })["catch"](function (error) {
+                console.error(error);
+              });
+            case 4:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee);
+      }));
+      function getSignals(_x) {
+        return _getSignals.apply(this, arguments);
+      }
+      return getSignals;
+    }()
+  }, {
     key: "render",
     value: function render() {
-      var query = lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default()(this.props.query, _types__WEBPACK_IMPORTED_MODULE_3__.defaultQuery);
+      var query = lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default()(this.props.query, _types__WEBPACK_IMPORTED_MODULE_4__.defaultQuery);
+
+      //const signalArray = signalData 
+
+      console.log("signals:" + signalData);
       var server = query.server,
-        capacity = query.capacity,
-        timeoutS = query.timeoutS;
+        dataType = query.dataType,
+        IsDisplayName = query.IsDisplayName,
+        aliasName = query.aliasName,
+        scale = query.scale,
+        pattern = query.pattern;
       return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
         className: "gf-form-group"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form"
-      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement(FormField, {
-        labelWidth: 10,
-        inputWidth: 10,
-        value: server,
+        className: "gf-form-inline"
+      }, _label || (_label = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
+        className: "gf-form-label query-keyword width-10"
+      }, "Select Type")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("select", {
+        className: "gf-form-label",
+        value: dataType,
+        onChange: this.onDataTypeChange
+      }, Options), _label2 || (_label2 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
+        className: "gf-form-label query-keyword width-10"
+      }, "Select Signal")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement(_grafana_ui__WEBPACK_IMPORTED_MODULE_3__.Select, {
+        className: "gf-form-label width-10",
+        isMulti: false,
+        isClearable: false,
+        backspaceRemovesValue: false,
         onChange: this.onServerChange,
-        label: "signal",
-        tooltip: "If not used the default server is used. Format: ws://SERVER:PORT"
+        options: signalData,
+        isSearchable: true,
+        maxMenuHeight: 500,
+        placeholder: "",
+        value: server,
+        noOptionsMessage: 'No options found'
       })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form",
-        hidden: true
-      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement(FormField, {
-        label: "Capacity",
-        tooltip: "Max. values",
-        labelWidth: 10,
-        inputWidth: 10,
-        onChange: this.onCapacityChange,
-        value: capacity,
-        type: "number"
+        className: "gf-form"
+      }, _label3 || (_label3 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
+        className: "gf-form-label query-keyword width-10"
+      }, "DisplayNames")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement(_grafana_ui__WEBPACK_IMPORTED_MODULE_3__.Switch, {
+        value: IsDisplayName,
+        onChange: this.onDisplayNameChange
       })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form",
-        hidden: true
-      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement(FormField, {
-        label: "Server Timeout (seconds)",
-        labelWidth: 13,
-        inputWidth: 7,
-        tooltip: "Enter 0 for no ping check",
-        value: timeoutS,
-        onChange: this.onTimeoutChange,
-        type: "number",
-        hidden: true
-      })));
+        className: "gf-form"
+      }, _label4 || (_label4 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
+        className: "gf-form-label query-keyword width-10"
+      }, "Alias")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
+        className: "gf-form max-width-8"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("input", {
+        className: "gf-form-input",
+        value: aliasName,
+        onChange: this.onAliasnameChange,
+        placeholder: "Alias"
+      }))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
+        className: "gf-form"
+      }, _label5 || (_label5 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
+        className: "gf-form-label query-keyword width-10"
+      }, "Scale")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
+        className: "gf-form max-width-8"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("input", {
+        className: "gf-form-input",
+        value: scale,
+        placeholder: "Multiplier",
+        onChange: this.onScaleChange
+      })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
+        className: "gf-form"
+      }, _label6 || (_label6 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
+        className: "gf-form-label query-keyword width-10"
+      }, "Pattern")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
+        className: "gf-form max-width-8"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("input", {
+        className: "gf-form-input",
+        value: pattern,
+        placeholder: "Redis Pattern",
+        onChange: this.onPatternChange
+      })))));
     }
   }]);
   return QueryEditor;
@@ -410,13 +648,164 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 var defaultQuery = {
   capacity: 1000,
-  timeoutS: 30
+  timeoutS: 30,
+  IsDisplayName: false
+  // dataType : "Streaming"
+
   //server: "ws://test:8080",
 };
 
 /**
  * These are options configured for each DataSource instance
  */
+
+/***/ }),
+
+/***/ "../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[3].use[1]!../node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[3].use[2]!../node_modules/sass-loader/dist/cjs.js!./QueryEditor.css":
+/*!***********************************************************************************************************************************************************************************************************!*\
+  !*** ../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[3].use[1]!../node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[3].use[2]!../node_modules/sass-loader/dist/cjs.js!./QueryEditor.css ***!
+  \***********************************************************************************************************************************************************************************************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../node_modules/css-loader/dist/runtime/sourceMaps.js */ "../node_modules/css-loader/dist/runtime/sourceMaps.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../node_modules/css-loader/dist/runtime/api.js */ "../node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, ".toggle-button {\n  font-size: 16px;\n  padding: 8px 16px;\n  border: none;\n  border-radius: 24px;\n  background-color: #ddd;\n  color: #333;\n  cursor: pointer;\n  transition: background-color 0.3s, color 0.3s;\n}\n\n.toggle-button.toggled {\n  background-color: #06c;\n  color: white;\n}", "",{"version":3,"sources":["webpack://./QueryEditor.css"],"names":[],"mappings":"AAAA;EACI,eAAA;EACA,iBAAA;EACA,YAAA;EACA,mBAAA;EACA,sBAAA;EACA,WAAA;EACA,eAAA;EACA,6CAAA;AACJ;;AAEE;EACE,sBAAA;EACA,YAAA;AACJ","sourcesContent":[".toggle-button {\r\n    font-size: 16px;\r\n    padding: 8px 16px;\r\n    border: none;\r\n    border-radius: 24px;\r\n    background-color: #ddd;\r\n    color: #333;\r\n    cursor: pointer;\r\n    transition: background-color 0.3s, color 0.3s;\r\n  }\r\n  \r\n  .toggle-button.toggled {\r\n    background-color: #06c;\r\n    color: white;\r\n  }"],"sourceRoot":""}]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ }),
+
+/***/ "../node_modules/css-loader/dist/runtime/api.js":
+/*!******************************************************!*\
+  !*** ../node_modules/css-loader/dist/runtime/api.js ***!
+  \******************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/*
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
+*/
+module.exports = function (cssWithMappingToString) {
+  var list = [];
+
+  // return the list of modules as css string
+  list.toString = function toString() {
+    return this.map(function (item) {
+      var content = "";
+      var needLayer = typeof item[5] !== "undefined";
+      if (item[4]) {
+        content += "@supports (".concat(item[4], ") {");
+      }
+      if (item[2]) {
+        content += "@media ".concat(item[2], " {");
+      }
+      if (needLayer) {
+        content += "@layer".concat(item[5].length > 0 ? " ".concat(item[5]) : "", " {");
+      }
+      content += cssWithMappingToString(item);
+      if (needLayer) {
+        content += "}";
+      }
+      if (item[2]) {
+        content += "}";
+      }
+      if (item[4]) {
+        content += "}";
+      }
+      return content;
+    }).join("");
+  };
+
+  // import a list of modules into the list
+  list.i = function i(modules, media, dedupe, supports, layer) {
+    if (typeof modules === "string") {
+      modules = [[null, modules, undefined]];
+    }
+    var alreadyImportedModules = {};
+    if (dedupe) {
+      for (var k = 0; k < this.length; k++) {
+        var id = this[k][0];
+        if (id != null) {
+          alreadyImportedModules[id] = true;
+        }
+      }
+    }
+    for (var _k = 0; _k < modules.length; _k++) {
+      var item = [].concat(modules[_k]);
+      if (dedupe && alreadyImportedModules[item[0]]) {
+        continue;
+      }
+      if (typeof layer !== "undefined") {
+        if (typeof item[5] === "undefined") {
+          item[5] = layer;
+        } else {
+          item[1] = "@layer".concat(item[5].length > 0 ? " ".concat(item[5]) : "", " {").concat(item[1], "}");
+          item[5] = layer;
+        }
+      }
+      if (media) {
+        if (!item[2]) {
+          item[2] = media;
+        } else {
+          item[1] = "@media ".concat(item[2], " {").concat(item[1], "}");
+          item[2] = media;
+        }
+      }
+      if (supports) {
+        if (!item[4]) {
+          item[4] = "".concat(supports);
+        } else {
+          item[1] = "@supports (".concat(item[4], ") {").concat(item[1], "}");
+          item[4] = supports;
+        }
+      }
+      list.push(item);
+    }
+  };
+  return list;
+};
+
+/***/ }),
+
+/***/ "../node_modules/css-loader/dist/runtime/sourceMaps.js":
+/*!*************************************************************!*\
+  !*** ../node_modules/css-loader/dist/runtime/sourceMaps.js ***!
+  \*************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+module.exports = function (item) {
+  var content = item[1];
+  var cssMapping = item[3];
+  if (!cssMapping) {
+    return content;
+  }
+  if (typeof btoa === "function") {
+    var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(cssMapping))));
+    var data = "sourceMappingURL=data:application/json;charset=utf-8;base64,".concat(base64);
+    var sourceMapping = "/*# ".concat(data, " */");
+    return [content].concat([sourceMapping]).join("\n");
+  }
+  return [content].join("\n");
+};
 
 /***/ }),
 
@@ -2081,6 +2470,334 @@ module.exports = stubFalse;
 
 /***/ }),
 
+/***/ "./QueryEditor.css":
+/*!*************************!*\
+  !*** ./QueryEditor.css ***!
+  \*************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! !../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js */ "../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !../node_modules/style-loader/dist/runtime/styleDomAPI.js */ "../node_modules/style-loader/dist/runtime/styleDomAPI.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../node_modules/style-loader/dist/runtime/insertBySelector.js */ "../node_modules/style-loader/dist/runtime/insertBySelector.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! !../node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js */ "../node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! !../node_modules/style-loader/dist/runtime/insertStyleElement.js */ "../node_modules/style-loader/dist/runtime/insertStyleElement.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! !../node_modules/style-loader/dist/runtime/styleTagTransform.js */ "../node_modules/style-loader/dist/runtime/styleTagTransform.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_3_use_1_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_3_use_2_node_modules_sass_loader_dist_cjs_js_QueryEditor_css__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! !!../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[3].use[1]!../node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[3].use[2]!../node_modules/sass-loader/dist/cjs.js!./QueryEditor.css */ "../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[3].use[1]!../node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[3].use[2]!../node_modules/sass-loader/dist/cjs.js!./QueryEditor.css");
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+
+var options = {};
+
+options.styleTagTransform = (_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5___default());
+options.setAttributes = (_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3___default());
+
+      options.insert = _node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2___default().bind(null, "head");
+    
+options.domAPI = (_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1___default());
+options.insertStyleElement = (_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4___default());
+
+var update = _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default()(_node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_3_use_1_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_3_use_2_node_modules_sass_loader_dist_cjs_js_QueryEditor_css__WEBPACK_IMPORTED_MODULE_6__["default"], options);
+
+
+
+
+       /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_3_use_1_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_3_use_2_node_modules_sass_loader_dist_cjs_js_QueryEditor_css__WEBPACK_IMPORTED_MODULE_6__["default"] && _node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_3_use_1_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_3_use_2_node_modules_sass_loader_dist_cjs_js_QueryEditor_css__WEBPACK_IMPORTED_MODULE_6__["default"].locals ? _node_modules_css_loader_dist_cjs_js_ruleSet_1_rules_3_use_1_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_3_use_2_node_modules_sass_loader_dist_cjs_js_QueryEditor_css__WEBPACK_IMPORTED_MODULE_6__["default"].locals : undefined);
+
+
+/***/ }),
+
+/***/ "../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js":
+/*!*****************************************************************************!*\
+  !*** ../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js ***!
+  \*****************************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+var stylesInDOM = [];
+function getIndexByIdentifier(identifier) {
+  var result = -1;
+  for (var i = 0; i < stylesInDOM.length; i++) {
+    if (stylesInDOM[i].identifier === identifier) {
+      result = i;
+      break;
+    }
+  }
+  return result;
+}
+function modulesToDom(list, options) {
+  var idCountMap = {};
+  var identifiers = [];
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i];
+    var id = options.base ? item[0] + options.base : item[0];
+    var count = idCountMap[id] || 0;
+    var identifier = "".concat(id, " ").concat(count);
+    idCountMap[id] = count + 1;
+    var indexByIdentifier = getIndexByIdentifier(identifier);
+    var obj = {
+      css: item[1],
+      media: item[2],
+      sourceMap: item[3],
+      supports: item[4],
+      layer: item[5]
+    };
+    if (indexByIdentifier !== -1) {
+      stylesInDOM[indexByIdentifier].references++;
+      stylesInDOM[indexByIdentifier].updater(obj);
+    } else {
+      var updater = addElementStyle(obj, options);
+      options.byIndex = i;
+      stylesInDOM.splice(i, 0, {
+        identifier: identifier,
+        updater: updater,
+        references: 1
+      });
+    }
+    identifiers.push(identifier);
+  }
+  return identifiers;
+}
+function addElementStyle(obj, options) {
+  var api = options.domAPI(options);
+  api.update(obj);
+  var updater = function updater(newObj) {
+    if (newObj) {
+      if (newObj.css === obj.css && newObj.media === obj.media && newObj.sourceMap === obj.sourceMap && newObj.supports === obj.supports && newObj.layer === obj.layer) {
+        return;
+      }
+      api.update(obj = newObj);
+    } else {
+      api.remove();
+    }
+  };
+  return updater;
+}
+module.exports = function (list, options) {
+  options = options || {};
+  list = list || [];
+  var lastIdentifiers = modulesToDom(list, options);
+  return function update(newList) {
+    newList = newList || [];
+    for (var i = 0; i < lastIdentifiers.length; i++) {
+      var identifier = lastIdentifiers[i];
+      var index = getIndexByIdentifier(identifier);
+      stylesInDOM[index].references--;
+    }
+    var newLastIdentifiers = modulesToDom(newList, options);
+    for (var _i = 0; _i < lastIdentifiers.length; _i++) {
+      var _identifier = lastIdentifiers[_i];
+      var _index = getIndexByIdentifier(_identifier);
+      if (stylesInDOM[_index].references === 0) {
+        stylesInDOM[_index].updater();
+        stylesInDOM.splice(_index, 1);
+      }
+    }
+    lastIdentifiers = newLastIdentifiers;
+  };
+};
+
+/***/ }),
+
+/***/ "../node_modules/style-loader/dist/runtime/insertBySelector.js":
+/*!*********************************************************************!*\
+  !*** ../node_modules/style-loader/dist/runtime/insertBySelector.js ***!
+  \*********************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+var memo = {};
+
+/* istanbul ignore next  */
+function getTarget(target) {
+  if (typeof memo[target] === "undefined") {
+    var styleTarget = document.querySelector(target);
+
+    // Special case to return head of iframe instead of iframe itself
+    if (window.HTMLIFrameElement && styleTarget instanceof window.HTMLIFrameElement) {
+      try {
+        // This will throw an exception if access to iframe is blocked
+        // due to cross-origin restrictions
+        styleTarget = styleTarget.contentDocument.head;
+      } catch (e) {
+        // istanbul ignore next
+        styleTarget = null;
+      }
+    }
+    memo[target] = styleTarget;
+  }
+  return memo[target];
+}
+
+/* istanbul ignore next  */
+function insertBySelector(insert, style) {
+  var target = getTarget(insert);
+  if (!target) {
+    throw new Error("Couldn't find a style target. This probably means that the value for the 'insert' parameter is invalid.");
+  }
+  target.appendChild(style);
+}
+module.exports = insertBySelector;
+
+/***/ }),
+
+/***/ "../node_modules/style-loader/dist/runtime/insertStyleElement.js":
+/*!***********************************************************************!*\
+  !*** ../node_modules/style-loader/dist/runtime/insertStyleElement.js ***!
+  \***********************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/* istanbul ignore next  */
+function insertStyleElement(options) {
+  var element = document.createElement("style");
+  options.setAttributes(element, options.attributes);
+  options.insert(element, options.options);
+  return element;
+}
+module.exports = insertStyleElement;
+
+/***/ }),
+
+/***/ "../node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js":
+/*!***********************************************************************************!*\
+  !*** ../node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js ***!
+  \***********************************************************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+/* istanbul ignore next  */
+function setAttributesWithoutAttributes(styleElement) {
+  var nonce =  true ? __webpack_require__.nc : 0;
+  if (nonce) {
+    styleElement.setAttribute("nonce", nonce);
+  }
+}
+module.exports = setAttributesWithoutAttributes;
+
+/***/ }),
+
+/***/ "../node_modules/style-loader/dist/runtime/styleDomAPI.js":
+/*!****************************************************************!*\
+  !*** ../node_modules/style-loader/dist/runtime/styleDomAPI.js ***!
+  \****************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/* istanbul ignore next  */
+function apply(styleElement, options, obj) {
+  var css = "";
+  if (obj.supports) {
+    css += "@supports (".concat(obj.supports, ") {");
+  }
+  if (obj.media) {
+    css += "@media ".concat(obj.media, " {");
+  }
+  var needLayer = typeof obj.layer !== "undefined";
+  if (needLayer) {
+    css += "@layer".concat(obj.layer.length > 0 ? " ".concat(obj.layer) : "", " {");
+  }
+  css += obj.css;
+  if (needLayer) {
+    css += "}";
+  }
+  if (obj.media) {
+    css += "}";
+  }
+  if (obj.supports) {
+    css += "}";
+  }
+  var sourceMap = obj.sourceMap;
+  if (sourceMap && typeof btoa !== "undefined") {
+    css += "\n/*# sourceMappingURL=data:application/json;base64,".concat(btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))), " */");
+  }
+
+  // For old IE
+  /* istanbul ignore if  */
+  options.styleTagTransform(css, styleElement, options.options);
+}
+function removeStyleElement(styleElement) {
+  // istanbul ignore if
+  if (styleElement.parentNode === null) {
+    return false;
+  }
+  styleElement.parentNode.removeChild(styleElement);
+}
+
+/* istanbul ignore next  */
+function domAPI(options) {
+  if (typeof document === "undefined") {
+    return {
+      update: function update() {},
+      remove: function remove() {}
+    };
+  }
+  var styleElement = options.insertStyleElement(options);
+  return {
+    update: function update(obj) {
+      apply(styleElement, options, obj);
+    },
+    remove: function remove() {
+      removeStyleElement(styleElement);
+    }
+  };
+}
+module.exports = domAPI;
+
+/***/ }),
+
+/***/ "../node_modules/style-loader/dist/runtime/styleTagTransform.js":
+/*!**********************************************************************!*\
+  !*** ../node_modules/style-loader/dist/runtime/styleTagTransform.js ***!
+  \**********************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/* istanbul ignore next  */
+function styleTagTransform(css, styleElement) {
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = css;
+  } else {
+    while (styleElement.firstChild) {
+      styleElement.removeChild(styleElement.firstChild);
+    }
+    styleElement.appendChild(document.createTextNode(css));
+  }
+}
+module.exports = styleTagTransform;
+
+/***/ }),
+
 /***/ "@grafana/data":
 /*!********************************!*\
   !*** external "@grafana/data" ***!
@@ -2225,6 +2942,11 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_rxjs__;
 /******/ 			if (!module.children) module.children = [];
 /******/ 			return module;
 /******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/nonce */
+/******/ 	(() => {
+/******/ 		__webpack_require__.nc = undefined;
 /******/ 	})();
 /******/ 	
 /************************************************************************/
