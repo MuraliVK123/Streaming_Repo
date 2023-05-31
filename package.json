@@ -1,5 +1,5 @@
 {
-  "name": "hse-streaming-datasource",
+  "name": "realtime-streaming-datasource",
   "version": "0.1.0",
   "description": "An WebSocket Client to use with Grafana streaming",
   "scripts": {
