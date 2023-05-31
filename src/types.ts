@@ -10,7 +10,8 @@ export interface MyQuery extends DataQuery {
   aliasName?: string;
   scale?: string;
   pattern?: string;
-  selectedSignals: any
+  selectedSignals: any;
+  displayNamesData: any;
   
 }
 
