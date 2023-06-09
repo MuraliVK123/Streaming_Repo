@@ -16,8 +16,7 @@ export interface MyQuery extends DataQuery {
 }
 
 export const defaultQuery: Partial<MyQuery> = {
-  capacity: 1000,
-  timeoutS: 30,
+ 
   IsDisplayName : false,
  // dataType : "Streaming"
 
@@ -29,4 +28,10 @@ export const defaultQuery: Partial<MyQuery> = {
  */
 export interface MyDataSourceOptions extends DataSourceJsonData {
   url?: string;
+}
+
+export interface MyVariableQuery {
+  namespace: string;
+  query: string;
+  rawQuery?: string
 }
