@@ -3,8 +3,9 @@
   "name": "realtime streaming datasource",
   "id": "realtime-streaming-datasource",
   "streaming": true,
-  "Alerting": true,
+  "alerting": true,
   "metrics": true,
+  "backend":true,
   "info": {
     "description": "",
     "author": {

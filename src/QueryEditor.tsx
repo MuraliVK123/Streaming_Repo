@@ -1,7 +1,9 @@
+import React, { ChangeEvent, PureComponent} from 'react';
+
 import defaults from 'lodash/defaults';
 
-import React, { ChangeEvent, PureComponent  } from 'react';
 
+import { getTemplateSrv } from '@grafana/runtime';
 
 import { Select, Switch } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
@@ -16,7 +18,7 @@ import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
    ]
 
    let signalData: any[] = []
-
+   
   
    const Options = options.map((option) => (
      <option key={option} value={option}>
@@ -24,55 +26,39 @@ import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
      </option>
    ));
 
- 
-   
-  
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
 export class QueryEditor extends PureComponent<Props> {
   
+  BaseURL: any;
   serverURL: string;
   variablePattern: string;
+  dataType = "Log"
+  //onPatternChange : (event : any) => void;
+   
+  state = {selectedSignals : []}
 
-  
 
   constructor(instanceSettings: Props) {
     super(instanceSettings);
     this.serverURL = instanceSettings.datasource.serverURL || '';
     this.variablePattern = instanceSettings.datasource.variablePattern || ""
-    
+    this.BaseURL = this.serverURL.replace("host",window.location.origin)
+
+    const query = defaults(this.props.query, defaultQuery);
+    console.log("signals:" + signalData)
+    query.dataType = query.dataType ? query.dataType : "Log"
+    this.getSignals(query.dataType)
+
    // this.OnInit()
 
   }
 
-  
-
-  OnInit() {
-
-    // // call api or anything
-    // signalData = [];
-    // let logData: any[] = [];
-    // fetch("http://liveserver-bridge:8080/live/signals?pattern=" + "*")
-    // .then(response => response.json())
-    // .then(data => {
-    //   signalData = [];
-    //   logData = data
-    //   let slicesData: any = logData;
-    //   slicesData.map((option: any, i: any) => {
-    //     signalData.push({label : option , value : option})
-    //   });
-    // })
-    // .catch(error => {
-    //   console.error(error)
-    // });
-    }
-
- 
 
   async getSignals(type: string){
     signalData = [];
     let logData: any[] = [];
-    await fetch("https://"+this.serverURL+"/api/realtime/" + type + "/signals?pattern=*")
+    await fetch(this.BaseURL + type + "/signals?pattern=*")
     .then(response => response.json())
     .then(data => {
       signalData = [];
@@ -81,6 +67,7 @@ export class QueryEditor extends PureComponent<Props> {
       slicesData.map((option: any, i: any) => {
         signalData.push({label : option , value : option})
       });
+      this.setState({selectedSignals : signalData})
     })
     .catch(error => {
       console.error(error)
@@ -101,11 +88,14 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
   onDisplayNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+
     const { onChange, query, onRunQuery } = this.props;
     onChange({ ...query, IsDisplayName: event.target.checked });
     let displayData: any[] = [];
     let type = query.dataType === "Log" ? "Log":"Live";
-    let displayPatterns = query.pattern ? query.pattern.split("|") : (query.server ? query.server.split("|") : []) ;
+    this.variablePattern = getTemplateSrv().replace(query.pattern, this.props.data?.request?.scopedVars);
+
+    let displayPatterns = this.variablePattern ? this.variablePattern.split("|") : (query.server ? query.server.split("|") : []) ;
     let _displayPattern: any = [];
    if(event.target.checked){
     displayPatterns.forEach((p, i) => {
@@ -119,7 +109,7 @@ export class QueryEditor extends PureComponent<Props> {
       _displayPattern.push(pat.join(".").replace("@(","").replace(")",""));
     });
     let displayPattern = "@("+_displayPattern.join("|")+")";
-    fetch("https://"+this.serverURL+"/api/realtime/"+ type + "?pattern=" + displayPattern)
+    fetch(this.BaseURL+ type + "?pattern=" + displayPattern)
     .then(response => response.json())
     .then(data => {
       let dName = data
@@ -181,6 +171,7 @@ export class QueryEditor extends PureComponent<Props> {
 
   };
   onPatternChange = (event: ChangeEvent<HTMLInputElement>) => {
+
     const { onChange, query, onRunQuery } = this.props;
     //query.pattern = undefined;
     let logData: any[] = [];
@@ -188,13 +179,15 @@ export class QueryEditor extends PureComponent<Props> {
     let type = query.dataType === "Log" ? "Log":"Live";
     onChange({ ...query, pattern: event.target.value,selectedSignals:logData });
     onRunQuery();
+    this.variablePattern = getTemplateSrv().replace(event.target.value, this.props.data?.request?.scopedVars);
+
     if(event.target.value !== ""){
-       pattern =  "@("+ event.target.value + ")"
+       pattern =  "@("+ this.variablePattern + ")"
     }
    
     console.log("" + this.variablePattern);
 
-    fetch("https://"+this.serverURL+"/api/realtime/"+ type + "/signals?pattern=" + pattern)
+    fetch(this.BaseURL + type + "/signals?pattern=" + pattern)
     .then(response => response.json())
     .then(data => {
       logData = data
@@ -217,12 +210,16 @@ export class QueryEditor extends PureComponent<Props> {
   };
 
   render() {
-    const query = defaults(this.props.query, defaultQuery);
 
-    
+    const query = defaults(this.props.query, defaultQuery);
     console.log("signals:" + signalData)
     query.dataType = query.dataType ? query.dataType : "Log"
-    //this.getSignals(query.dataType)
+    //let newPattern = getTemplateSrv().replace(query.pattern, this.props.data?.request?.scopedVars);
+
+    //console.log("signals:" + this.variablePattern,newPattern)
+
+
+
     const { server,dataType,IsDisplayName,aliasName,scale,pattern } = query;
     
         return (
@@ -241,7 +238,7 @@ export class QueryEditor extends PureComponent<Props> {
                   isClearable={true}
                   backspaceRemovesValue={false}
                   onChange={this.onServerChange}
-                  options={signalData}
+                  options={this.state.selectedSignals}
                   isSearchable={true}
                   placeholder= ""
                   value={server}

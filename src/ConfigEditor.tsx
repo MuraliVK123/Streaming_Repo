@@ -28,11 +28,11 @@ export class ConfigEditor extends PureComponent<Props, State> {
       <div className="gf-form-group">
         <div className="gf-form">
           <FormField
-            label="HOST IP ADDRESS"
+            label="HOST ADDRESS"
             labelWidth={15}
             inputWidth={20}
             onChange={this.onURLChange}
-            value={jsonData.url || ''}
+            value={jsonData.url || 'host/api/realtime/'}
           /></div>
         
       </div>
