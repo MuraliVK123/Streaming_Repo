@@ -3,7 +3,11 @@
   "name": "realtime streaming datasource",
   "id": "realtime-streaming-datasource",
   "streaming": true,
+<<<<<<< HEAD
   "alerting": true,
+=======
+  "Alerting": true,
+>>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
   "metrics": true,
   "backend":true,
   "info": {
