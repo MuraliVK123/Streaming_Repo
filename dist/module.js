@@ -1,4 +1,4 @@
-define(["@grafana/data","@grafana/runtime","@grafana/ui","react","rxjs"], (__WEBPACK_EXTERNAL_MODULE__grafana_data__, __WEBPACK_EXTERNAL_MODULE__grafana_runtime__, __WEBPACK_EXTERNAL_MODULE__grafana_ui__, __WEBPACK_EXTERNAL_MODULE_react__, __WEBPACK_EXTERNAL_MODULE_rxjs__) => { return /******/ (() => { // webpackBootstrap
+define(["@grafana/data","@grafana/runtime","@grafana/ui","lodash","react","rxjs"], (__WEBPACK_EXTERNAL_MODULE__grafana_data__, __WEBPACK_EXTERNAL_MODULE__grafana_runtime__, __WEBPACK_EXTERNAL_MODULE__grafana_ui__, __WEBPACK_EXTERNAL_MODULE_lodash__, __WEBPACK_EXTERNAL_MODULE_react__, __WEBPACK_EXTERNAL_MODULE_rxjs__) => { return /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
 /***/ "./ConfigEditor.tsx":
@@ -37,13 +37,10 @@ var FormField = _grafana_ui__WEBPACK_IMPORTED_MODULE_1__.LegacyForms.FormField;
 var ConfigEditor = /*#__PURE__*/function (_PureComponent) {
   _inherits(ConfigEditor, _PureComponent);
   var _super = _createSuper(ConfigEditor);
-  function ConfigEditor() {
+  function ConfigEditor(instanceSettings) {
     var _this;
     _classCallCheck(this, ConfigEditor);
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-    _this = _super.call.apply(_super, [this].concat(args));
+    _this = _super.call(this, instanceSettings);
     _defineProperty(_assertThisInitialized(_this), "onURLChange", function (event) {
       var _this$props = _this.props,
         onOptionsChange = _this$props.onOptionsChange,
@@ -55,6 +52,18 @@ var ConfigEditor = /*#__PURE__*/function (_PureComponent) {
         jsonData: jsonData
       }));
     });
+    _defineProperty(_assertThisInitialized(_this), "onLoadURL", function () {
+      var _this$props2 = _this.props,
+        onOptionsChange = _this$props2.onOptionsChange,
+        options = _this$props2.options;
+      var jsonData = _extends({}, options.jsonData, {
+        url: "host/api/realtime/"
+      });
+      onOptionsChange(_extends({}, options, {
+        jsonData: jsonData
+      }));
+    });
+    _this.onLoadURL();
     return _this;
   }
   _createClass(ConfigEditor, [{
@@ -67,11 +76,7 @@ var ConfigEditor = /*#__PURE__*/function (_PureComponent) {
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "gf-form"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(FormField, {
-<<<<<<< HEAD
         label: "HOST ADDRESS",
-=======
-        label: "HOST IP ADDRESS",
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
         labelWidth: 15,
         inputWidth: 20,
         onChange: this.onURLChange,
@@ -131,7 +136,9 @@ function _toPrimitive(input, hint) { if (_typeof(input) !== "object" || input ==
 
 
 
+//import {switchMap,takeUntil} from 'rxjs/operators'
 
+//import { delay } from 'lodash';
 //import { TimeSeries } from '@grafana/ui';
 
 var DataSource = /*#__PURE__*/function (_DataSourceApi) {
@@ -142,487 +149,335 @@ var DataSource = /*#__PURE__*/function (_DataSourceApi) {
     _classCallCheck(this, DataSource);
     _this = _super.call(this, instanceSettings);
     _defineProperty(_assertThisInitialized(_this), "serverURL", void 0);
-<<<<<<< HEAD
     _defineProperty(_assertThisInitialized(_this), "wssUrl", void 0);
     _defineProperty(_assertThisInitialized(_this), "signalData", void 0);
     _defineProperty(_assertThisInitialized(_this), "variablePattern", void 0);
     _defineProperty(_assertThisInitialized(_this), "dataType", void 0);
     _defineProperty(_assertThisInitialized(_this), "BaseURL", void 0);
+    _defineProperty(_assertThisInitialized(_this), "SelectSignal", void 0);
     _this.serverURL = instanceSettings.jsonData.url || 'ws://localhost:8181';
     _this.BaseURL = _this.serverURL.replace("host", window.location.origin);
     _this.wssUrl = _this.serverURL.replace("host", "wss://" + window.location.host);
-=======
-    _defineProperty(_assertThisInitialized(_this), "signalData", void 0);
-    _defineProperty(_assertThisInitialized(_this), "variablePattern", void 0);
-    _this.serverURL = instanceSettings.jsonData.url || 'ws://localhost:8181';
-    _this.getSignals("Log");
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
     return _this;
   }
   _createClass(DataSource, [{
-    key: "getSignals",
-    value: function () {
-      var _getSignals = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(type) {
-        var _this2 = this;
-        var logData;
-        return _regeneratorRuntime().wrap(function _callee$(_context) {
-          while (1) switch (_context.prev = _context.next) {
-            case 0:
-              this.signalData = [];
-              logData = [];
-              _context.next = 4;
-              return fetch("https://" + this.serverURL + "/api/realtime/" + type + "/signals?pattern=*").then(function (response) {
-                return response.json();
-              }).then(function (data) {
-                _this2.signalData = [];
-                logData = data;
-                var slicesData = logData;
-                slicesData.map(function (option, i) {
-                  _this2.signalData.push({
-                    label: option,
-                    value: option
-                  });
-                });
-              })["catch"](function (error) {
-                console.error(error);
-              });
-            case 4:
-            case "end":
-              return _context.stop();
-          }
-        }, _callee, this);
-      }));
-      function getSignals(_x) {
-        return _getSignals.apply(this, arguments);
-      }
-      return getSignals;
-    }()
-  }, {
-    key: "getVariables",
-    value: function getVariables(options) {
-      this.variablePattern = options.scopedVars;
-    }
-  }, {
     key: "query",
     value: function query(options) {
-      var _this3 = this,
+      var _this2 = this,
         _console;
-      var observables = options.targets.map(function (target) {
-<<<<<<< HEAD
-        var URL = window.location.origin;
-        console.log(URL);
-        var query = lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default()(target, _types__WEBPACK_IMPORTED_MODULE_4__.defaultQuery);
-        query.dataType = query.dataType ? query.dataType : "";
-        _this2.dataType = query.dataType;
-        query.pattern = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.pattern, options.scopedVars);
-        query.aliasName = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.aliasName, options.scopedVars);
-        query.scale = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.scale, options.scopedVars);
-        query.server = query.server ? query.server : "";
-        return new rxjs__WEBPACK_IMPORTED_MODULE_3__.Observable(function (subscriber) {
-=======
-        // let min = options.range.from.valueOf();
-        // let max = options.range.to.valueOf();
-        // let order = "asc"
-        var query = lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default()(target, _types__WEBPACK_IMPORTED_MODULE_4__.defaultQuery);
-        _this3.variablePattern = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.pattern, options.scopedVars);
-        query.server = query.server ? query.server : "";
-        query.dataType = query.dataType ? query.dataType : "";
-        //let PatternSignals = this.getPatternSignals(query.dataType,this.variablePattern);
-        //query.selectedSignals = PatternSignals != null ? PatternSignals : [query.server]; 
-        console.log(query.pattern);
+      var observables = options.targets.map( /*#__PURE__*/function () {
+        var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(target) {
+          var URL, query;
+          return _regeneratorRuntime().wrap(function _callee$(_context) {
+            while (1) switch (_context.prev = _context.next) {
+              case 0:
+                URL = window.location.origin;
+                console.log(URL);
+                query = lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default()(target, _types__WEBPACK_IMPORTED_MODULE_4__.defaultQuery);
+                query.type = query.type ? query.type : "";
+                _this2.dataType = query.type;
+                query.pattern = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.pattern, options.scopedVars);
+                query.alias = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.alias, options.scopedVars);
+                query.scale = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.scale, options.scopedVars);
+                query.target = query.target ? query.target : "";
+                _context.next = 11;
+                return _this2.processData(query.pattern, query.type);
+              case 11:
+                _context.next = 13;
+                return new Promise(function (subscriber) {
+                  console.log(_this2.SelectSignal);
+                  var signalString = "";
+                  var dataField = [];
+                  //console.log(frame);
+                  query.selectedSignals = query.selectedSignals ? query.selectedSignals : [];
+                  var signalArray = query.selectedSignals;
+                  if (query.selectedSignals.length > 0) {
+                    dataField.push("timestamp");
+                    signalArray.map(function (sig) {
+                      signalString = signalString + "&signal=" + sig;
+                      dataField.push(sig);
+                    });
+                  }
+                  var isStreaming = false;
+                  var streamingData;
+                  //let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
 
-        // query.server = getTemplateSrv().replace(query.server, options.scopedVars)
-        // query.dataType = getTemplateSrv().replace(query.dataType, options.scopedVars)
-        // query.IsDisplayName = Boolean(getTemplateSrv().replace(query.IsDisplayName ? String(query.IsDisplayName) : "false", options.scopedVars))
+                  var server = _this2.wssUrl + query.type + "?db=global" + signalString;
+                  var connection = new WebSocket(server);
+                  var interval;
+                  // frame.refId = query.refId;
 
-        console.log("Query" + query);
-        return new rxjs__WEBPACK_IMPORTED_MODULE_3__.Observable(function (subscriber) {
-          //query.capacity =  parseFloat(getTemplateSrv().replace(query.capacity.toString(), options.scopedVars))
+                  connection.onerror = function (error) {
+                    console.error("WebSocket error: ".concat(JSON.stringify(error)));
+                    clearInterval(interval);
+                    //throw new Error("Can't connect to " + this.serverURL);
+                  };
 
-          //const frame1 : TimeSeries;
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
-          var signalString = "";
-          var dataField = [];
-          //console.log(frame);
-          query.selectedSignals = query.selectedSignals ? query.selectedSignals : [];
-          var signalArray = query.selectedSignals;
-          if (query.selectedSignals.length > 0) {
-            dataField.push("timestamp");
-            signalArray.map(function (sig) {
-              signalString = signalString + "&signal=" + sig;
-              dataField.push(sig);
-            });
-          }
-          var isStreaming = false;
-          var streamingData;
-          //let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
-
-<<<<<<< HEAD
-          var server = _this2.wssUrl + query.dataType + "?db=global" + signalString;
-=======
-          var server = "wss://" + _this3.serverURL + "/api/realtime/live?db=global" + signalString;
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
-          var connection = new WebSocket(server);
-          var interval;
-          // frame.refId = query.refId;
-
-          connection.onerror = function (error) {
-            console.error("WebSocket error: ".concat(JSON.stringify(error)));
-            clearInterval(interval);
-            //throw new Error("Can't connect to " + this.serverURL);
-          };
-
-          connection.onmessage = function (event) {
-            var jsonData = JSON.parse(event.data);
-            console.log(jsonData);
-            //let finalData = jsonData[query.server ? query.server : 0]
-            var finalData = jsonData;
-            console.log("finaldata" + finalData);
-            var frameData = [];
-            var aliasName;
-            if (query.aliasName) {
-              aliasName = query.aliasName;
-            }
-            if (!isStreaming) {
-              streamingData = finalData;
-              isStreaming = true;
-            }
-            console.log("alias" + aliasName);
-            var count = 0;
-            signalArray.map(function (sig) {
-              var displayKey = 0;
-              if (sig !== "timestamp" && streamingData[sig] !== undefined) {
-                frameData = {};
-                var value = finalData[sig] === undefined ? streamingData[sig].value : finalData[sig].value;
-                frameData["timestamp"] = finalData[sig] === undefined ? streamingData[sig].timestamp : finalData[sig].timestamp;
-                if (query.scale !== undefined && Number(query.scale) > 0) {
-                  value = value * Number(query.scale);
-                }
-                if (finalData[sig] !== undefined && isStreaming) {
-                  streamingData[sig] = finalData[sig];
-                }
-                if (signalArray.length === 1 && query.aliasName !== undefined && aliasName !== undefined) {
-                  frameData[aliasName] = value;
-                } else {
-                  frameData[sig] = value;
-                }
-                if (query.IsDisplayName) {
-                  var Display = sig.split(".");
-                  Display.pop();
-                  var DisplayString = Display.join(".");
-                  signalArray.map(function (k) {
-                    if (k === DisplayString + ".displayName") {
-                      displayKey = 1;
+                  connection.onmessage = function (event) {
+                    var observable;
+                    observable = new rxjs__WEBPACK_IMPORTED_MODULE_3__.Observable(function (obser) {
+                      obser.next({
+                        data: [],
+                        key: query.refId + count,
+                        state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.NotStarted
+                      });
+                    });
+                    var jsonData = JSON.parse(event.data);
+                    console.log(jsonData);
+                    //let finalData = jsonData[query.server ? query.server : 0]
+                    var finalData = jsonData;
+                    console.log("finaldata" + finalData);
+                    var frameData = [];
+                    var aliasName;
+                    if (query.alias) {
+                      aliasName = query.alias;
                     }
-<<<<<<< HEAD
-                  });
-                  if (signalArray.length === 1 && query.displayNamesData.length === 1) {
-                    displayKey = 1;
-                  }
-                }
-                if (displayKey === 0) {
-                  var frame = {};
-                  frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail',
-                    capacity: query.capacity || 1000
-                  });
-                  if (frame["frame" + count].fields.length <= 1) {
-                    //first time initalize the keys from the json data
-                    Object.keys(frameData).forEach(function (k) {
-                      if (k === "timestamp") {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                        });
-                      } else {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
-                        });
-                      }
-                    });
-                  }
-                  ;
-                  frame["frame" + count].add(frameData);
+                    if (!isStreaming) {
+                      streamingData = finalData;
+                      isStreaming = true;
+                    }
+                    console.log("alias" + aliasName);
+                    var count = 0;
+                    signalArray.map(function (sig) {
+                      var displayKey = 0;
+                      if (sig !== "timestamp" && streamingData[sig] !== undefined) {
+                        frameData = {};
+                        var value = finalData[sig] === undefined ? streamingData[sig].value : finalData[sig].value;
+                        frameData["timestamp"] = finalData[sig] === undefined ? streamingData[sig].timestamp : finalData[sig].timestamp;
+                        if (query.scale !== undefined && Number(query.scale) > 0) {
+                          value = value * Number(query.scale);
+                        }
+                        if (finalData[sig] !== undefined && isStreaming) {
+                          streamingData[sig] = finalData[sig];
+                        }
+                        if (signalArray.length === 1 && query.alias !== undefined && aliasName !== undefined) {
+                          frameData[aliasName] = value;
+                        } else {
+                          frameData[sig] = value;
+                        }
+                        if (query.checked) {
+                          var Display = sig.split(".");
+                          Display.pop();
+                          var DisplayString = Display.join(".");
+                          signalArray.map(function (k) {
+                            if (k === DisplayString + ".displayName") {
+                              displayKey = 1;
+                            }
+                          });
+                          if (signalArray.length === 1 && query.displayNamesData.length === 1) {
+                            displayKey = 1;
+                          }
+                        }
+                        if (displayKey === 0) {
+                          var frame = {};
+                          frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
+                            append: 'tail'
+                          });
+                          if (frame["frame" + count].fields.length <= 1) {
+                            //first time initalize the keys from the json data
+                            Object.keys(frameData).forEach(function (k) {
+                              if (k === "timestamp") {
+                                frame["frame" + count].addField({
+                                  name: k,
+                                  type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
+                                });
+                              } else {
+                                frame["frame" + count].addField({
+                                  name: k,
+                                  type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
+                                });
+                              }
+                            });
+                          }
+                          ;
+                          frame["frame" + count].add(frameData);
+                          observable = new rxjs__WEBPACK_IMPORTED_MODULE_3__.Observable(function (obser) {
+                            obser.next({
+                              data: [frame["frame" + count]],
+                              key: query.refId + count,
+                              state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+                            });
+                          });
+                          count = count + 1;
 
-                  //this.queryResponse((subscriber : any) => {
-                  subscriber.next({
-                    //data:  [toDataFrame(frame.fields)],
-                    //data:  [Object.values(frame.fields[0].values)],
-                    data: [frame["frame" + count]],
-                    key: query.refId + count,
-                    state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
-                  });
-                  count = count + 1;
-                  // })
-                }
-              }
-            });
+                          //return observable
+                          //this.queryResponse((subscriber : any) => {
 
-            if (query.IsDisplayName && query.displayNamesData.length > 0) {
-              query.displayNamesData.map(function (sig) {
-                if (streamingData[sig.signalName] !== undefined) {
-                  var DisplayString = sig.signalName.split(".");
-                  DisplayString.pop();
-                  DisplayString.push("value");
-                  var displayKey = DisplayString.join(".");
-                  frameData = {};
-                  var value = finalData[displayKey] === undefined ? streamingData[displayKey].value : finalData[displayKey].value;
-                  frameData["timestamp"] = finalData[displayKey] === undefined ? streamingData[displayKey].timestamp : finalData[displayKey].timestamp;
-                  if (query.scale !== undefined && Number(query.scale) > 0) {
-                    value = value * Number(query.scale);
-                  }
-                  if (finalData[displayKey] !== undefined && isStreaming) {
-                    streamingData[displayKey] = finalData[displayKey];
-                  }
-                  frameData[sig.displayName] = value;
-                  var frame = {};
-                  frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail'
-                  });
-                  if (frame["frame" + count].fields.length <= 1) {
-                    //first time initalize the keys from the json data
-                    Object.keys(frameData).forEach(function (k) {
-                      if (k === "timestamp") {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                        });
-                      } else {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
-                        });
+                          // })
+                        }
                       }
                     });
-                  }
-                  ;
-                  frame["frame" + count].add(frameData);
-                  subscriber.next({
-                    //data:  [toDataFrame(frame.fields)],
-                    //data:  [Object.values(frame.fields[0].values)],
-                    data: [frame["frame" + count]],
-                    key: query.refId + count,
-                    state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
-                  });
-                  count = count + 1;
-                } else if (query.displayNamesData.length === 1 && signalArray.length === 1) {
-                  frameData = {};
-                  var _frame = {};
-                  _frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail'
-                  });
-=======
-                  });
-                  if (signalArray.length === 1 && query.displayNamesData.length === 1) {
-                    displayKey = 1;
-                  }
-                }
-                if (displayKey === 0) {
-                  var frame = {};
-                  frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail',
-                    capacity: query.capacity || 1000
-                  });
-                  if (frame["frame" + count].fields.length <= 1) {
-                    //first time initalize the keys from the json data
-                    Object.keys(frameData).forEach(function (k) {
-                      if (k === "timestamp") {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                        });
-                      } else {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
-                        });
-                      }
-                    });
-                  }
-                  ;
-                  frame["frame" + count].add(frameData);
-                  subscriber.next({
-                    //data:  [toDataFrame(frame.fields)],
-                    //data:  [Object.values(frame.fields[0].values)],
-                    data: [frame["frame" + count]],
-                    key: query.refId + count,
-                    state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
-                  });
-                  count = count + 1;
-                }
-              }
-            });
-            if (query.IsDisplayName && query.displayNamesData.length > 0) {
-              query.displayNamesData.map(function (sig) {
-                if (streamingData[sig.signalName] !== undefined) {
-                  var DisplayString = sig.signalName.split(".");
-                  DisplayString.pop();
-                  DisplayString.push("value");
-                  var displayKey = DisplayString.join(".");
-                  frameData = {};
-                  var value = finalData[displayKey] === undefined ? streamingData[displayKey].value : finalData[displayKey].value;
-                  frameData["timestamp"] = finalData[displayKey] === undefined ? streamingData[displayKey].timestamp : finalData[displayKey].timestamp;
-                  if (query.scale !== undefined && Number(query.scale) > 0) {
-                    value = value * Number(query.scale);
-                  }
-                  if (finalData[displayKey] !== undefined && isStreaming) {
-                    streamingData[displayKey] = finalData[displayKey];
-                  }
-                  frameData[sig.displayName] = value;
-                  var frame = {};
-                  frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail'
-                  });
-                  if (frame["frame" + count].fields.length <= 1) {
-                    //first time initalize the keys from the json data
-                    Object.keys(frameData).forEach(function (k) {
-                      if (k === "timestamp") {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                        });
-                      } else {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
-                        });
-                      }
-                    });
-                  }
-                  ;
-                  frame["frame" + count].add(frameData);
-                  subscriber.next({
-                    //data:  [toDataFrame(frame.fields)],
-                    //data:  [Object.values(frame.fields[0].values)],
-                    data: [frame["frame" + count]],
-                    key: query.refId + count,
-                    state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
-                  });
-                  count = count + 1;
-                } else if (query.displayNamesData.length === 1 && signalArray.length === 1) {
-                  frameData = {};
-                  var _frame = {};
-                  _frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail'
-                  });
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
-                  frameData["timestamp"] = finalData[signalArray[0]].timestamp;
-                  frameData[sig.displayName] = finalData[signalArray[0]].value;
-                  if (_frame["frame" + count].fields.length <= 1) {
-                    //first time initalize the keys from the json data
-                    Object.keys(frameData).forEach(function (k) {
-                      if (k === "timestamp") {
-                        _frame["frame" + count].addField({
-                          name: k,
-                          type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                        });
-                      } else {
-                        _frame["frame" + count].addField({
-                          name: k,
-                          type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
-                        });
-                      }
-                    });
-                  }
-                  ;
-                  _frame["frame" + count].add(frameData);
-                  subscriber.next({
-                    //data:  [toDataFrame(frame.fields)],
-                    //data:  [Object.values(frame.fields[0].values)],
-                    data: [_frame["frame" + count]],
-                    key: query.refId + count,
-                    state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
-                  });
-                  count = count + 1;
-                }
-              });
+
+                    if (query.checked && query.displayNamesData.length > 0) {
+                      query.displayNamesData.map(function (sig) {
+                        if (streamingData[sig.signalName] !== undefined) {
+                          var DisplayString = sig.signalName.split(".");
+                          DisplayString.pop();
+                          DisplayString.push("value");
+                          var displayKey = DisplayString.join(".");
+                          frameData = {};
+                          var value = finalData[displayKey] === undefined ? streamingData[displayKey].value : finalData[displayKey].value;
+                          frameData["timestamp"] = finalData[displayKey] === undefined ? streamingData[displayKey].timestamp : finalData[displayKey].timestamp;
+                          if (query.scale !== undefined && Number(query.scale) > 0) {
+                            value = value * Number(query.scale);
+                          }
+                          if (finalData[displayKey] !== undefined && isStreaming) {
+                            streamingData[displayKey] = finalData[displayKey];
+                          }
+                          frameData[sig.displayName] = value;
+                          var frame = {};
+                          frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
+                            append: 'tail'
+                          });
+                          if (frame["frame" + count].fields.length <= 1) {
+                            //first time initalize the keys from the json data
+                            Object.keys(frameData).forEach(function (k) {
+                              if (k === "timestamp") {
+                                frame["frame" + count].addField({
+                                  name: k,
+                                  type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
+                                });
+                              } else {
+                                frame["frame" + count].addField({
+                                  name: k,
+                                  type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
+                                });
+                              }
+                            });
+                          }
+                          ;
+                          frame["frame" + count].add(frameData);
+                          observable = new rxjs__WEBPACK_IMPORTED_MODULE_3__.Observable(function (obser) {
+                            obser.next({
+                              data: [frame["frame" + count]],
+                              key: query.refId + count,
+                              state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+                            });
+                          });
+                          count = count + 1;
+
+                          //return observable
+                        } else if (query.displayNamesData.length === 1 && signalArray.length === 1) {
+                          frameData = {};
+                          var _frame = {};
+                          _frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
+                            append: 'tail'
+                          });
+                          frameData["timestamp"] = finalData[signalArray[0]].timestamp;
+                          frameData[sig.displayName] = finalData[signalArray[0]].value;
+                          if (_frame["frame" + count].fields.length <= 1) {
+                            //first time initalize the keys from the json data
+                            Object.keys(frameData).forEach(function (k) {
+                              if (k === "timestamp") {
+                                _frame["frame" + count].addField({
+                                  name: k,
+                                  type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
+                                });
+                              } else {
+                                _frame["frame" + count].addField({
+                                  name: k,
+                                  type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
+                                });
+                              }
+                            });
+                          }
+                          ;
+                          _frame["frame" + count].add(frameData);
+                          observable = new rxjs__WEBPACK_IMPORTED_MODULE_3__.Observable(function (obser) {
+                            return obser.next({
+                              data: [_frame["frame" + count]],
+                              key: query.refId + count,
+                              state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+                            });
+                          });
+                          count = count + 1;
+                          // return observable
+                        }
+                      });
+                    }
+
+                    return observable;
+                  };
+                  connection.onclose = function (ev) {
+                    console.log("WebSocket closed: " + ev.reason);
+                    clearInterval(interval);
+                  };
+                  return function () {
+                    connection.close(1000, "Dashboard closed");
+                  };
+                });
+              case 13:
+                return _context.abrupt("return", _context.sent);
+              case 14:
+              case "end":
+                return _context.stop();
             }
-          };
-          connection.onclose = function (ev) {
-            console.log("WebSocket closed: " + ev.reason);
-            clearInterval(interval);
-          };
-          return function () {
-            connection.close(1000, "Dashboard closed");
-          };
-        });
-      });
+          }, _callee);
+        }));
+        return function (_x) {
+          return _ref.apply(this, arguments);
+        };
+      }());
       (_console = console).log.apply(_console, _toConsumableArray(observables));
       return rxjs__WEBPACK_IMPORTED_MODULE_3__.merge.apply(void 0, _toConsumableArray(observables));
     }
   }, {
-    key: "getPatternSignals",
+    key: "delay",
+    value: function delay(ms) {
+      return new Promise(function (resolve) {
+        setTimeout(function () {
+          resolve();
+        }, ms);
+      });
+    }
+  }, {
+    key: "processData",
     value: function () {
-      var _getPatternSignals = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(dataType, pattern) {
-        var response, json;
+      var _processData = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(pattern, type) {
+        var _this3 = this;
+        var signalArray;
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
-              console.log(this.serverURL);
-              _context2.next = 3;
-              return fetch("https://" + this.serverURL + "/api/realtime/" + dataType + "/signals?pattern=" + pattern);
-            case 3:
-              response = _context2.sent;
-              _context2.next = 6;
-              return response.json();
+              signalArray = [];
+              _context2.prev = 1;
+              _context2.next = 4;
+              return fetch(this.BaseURL + type + "/signals?pattern=" + pattern).then(function (response) {
+                return response.json();
+              }).then(function (data) {
+                _this3.SelectSignal = data;
+                return signalArray;
+              })["catch"](function (error) {
+                return signalArray;
+              });
+            case 4:
+              _context2.next = 9;
+              break;
             case 6:
-              json = _context2.sent;
-              return _context2.abrupt("return", json);
-            case 8:
+              _context2.prev = 6;
+              _context2.t0 = _context2["catch"](1);
+              return _context2.abrupt("return", signalArray);
+            case 9:
+              return _context2.abrupt("return", signalArray);
+            case 10:
             case "end":
               return _context2.stop();
           }
-        }, _callee2, this);
+        }, _callee2, this, [[1, 6]]);
       }));
-      function getPatternSignals(_x2, _x3) {
-        return _getPatternSignals.apply(this, arguments);
+      function processData(_x2, _x3) {
+        return _processData.apply(this, arguments);
       }
-      return getPatternSignals;
-    }()
-  }, {
-    key: "doRequest",
-    value: function () {
-      var _doRequest = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(options) {
-        var logData;
-        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-          while (1) switch (_context3.prev = _context3.next) {
-            case 0:
-              logData = []; //
-              _context3.next = 3;
-              return fetch("https://" + this.serverURL + "/api/realtime/log?db=global&signal=" + options + ":ResultsLog").then(function (response) {
-                return response.json();
-              }).then(function (data) {
-                logData = data;
-                return logData.map(function (row) {
-                  return {
-                    time: row.timestamp,
-                    value: row.value
-                  };
-                });
-              })["catch"](function (error) {
-                return console.error(error);
-              });
-            case 3:
-            case "end":
-              return _context3.stop();
-          }
-        }, _callee3, this);
-      }));
-      function doRequest(_x4) {
-        return _doRequest.apply(this, arguments);
-      }
-      return doRequest;
+      return processData;
     }()
   }, {
     key: "testDatasource",
     value: function () {
-      var _testDatasource = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-          while (1) switch (_context4.prev = _context4.next) {
+      var _testDatasource = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
             case 0:
-<<<<<<< HEAD
-              _context.next = 2;
+              _context3.next = 2;
               return fetch(this.BaseURL + "live/signals?pattern=*").then(function (response) {
                 return response.json();
               }).then(function (data) {
@@ -643,27 +498,31 @@ var DataSource = /*#__PURE__*/function (_DataSourceApi) {
                   status: 'fail',
                   message: 'Database Connection failed'
                 };
-=======
-              return _context4.abrupt("return", {
-                status: 'success',
-                message: 'Data source tests - Success'
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
               });
             case 2:
             case "end":
-              return _context4.stop();
+              return _context3.stop();
           }
-<<<<<<< HEAD
-        }, _callee, this);
-=======
-        }, _callee4);
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
+        }, _callee3, this);
       }));
       function testDatasource() {
         return _testDatasource.apply(this, arguments);
       }
       return testDatasource;
     }()
+  }, {
+    key: "metricFindQuery",
+    value: function metricFindQuery(query, options) {
+      console.log(query, options);
+    }
+  }, {
+    key: "toggleEditorMode",
+    value: function toggleEditorMode() {
+      var query = {
+        "rawQuery": true
+      };
+      query.rawQuery = !query.rawQuery;
+    }
   }]);
   return DataSource;
 }(_grafana_data__WEBPACK_IMPORTED_MODULE_1__.DataSourceApi);
@@ -681,7 +540,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "QueryEditor": () => (/* binding */ QueryEditor)
 /* harmony export */ });
-<<<<<<< HEAD
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "react");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var lodash_defaults__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lodash/defaults */ "../node_modules/lodash/defaults.js");
@@ -691,16 +549,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _grafana_ui__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @grafana/ui */ "@grafana/ui");
 /* harmony import */ var _grafana_ui__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_grafana_ui__WEBPACK_IMPORTED_MODULE_3__);
 /* harmony import */ var _types__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./types */ "./types.ts");
-=======
-/* harmony import */ var lodash_defaults__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash/defaults */ "../node_modules/lodash/defaults.js");
-/* harmony import */ var lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash_defaults__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react */ "react");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _grafana_ui__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @grafana/ui */ "@grafana/ui");
-/* harmony import */ var _grafana_ui__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_grafana_ui__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _types__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./types */ "./types.ts");
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
-var _label, _label2, _label3, _label4, _label5, _label6;
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! lodash */ "lodash");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_5__);
+var _label, _label2, _label3, _label4, _label5;
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return exports; }; var exports = {}, Op = Object.prototype, hasOwn = Op.hasOwnProperty, defineProperty = Object.defineProperty || function (obj, key, desc) { obj[key] = desc.value; }, $Symbol = "function" == typeof Symbol ? Symbol : {}, iteratorSymbol = $Symbol.iterator || "@@iterator", asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator", toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag"; function define(obj, key, value) { return Object.defineProperty(obj, key, { value: value, enumerable: !0, configurable: !0, writable: !0 }), obj[key]; } try { define({}, ""); } catch (err) { define = function define(obj, key, value) { return obj[key] = value; }; } function wrap(innerFn, outerFn, self, tryLocsList) { var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator, generator = Object.create(protoGenerator.prototype), context = new Context(tryLocsList || []); return defineProperty(generator, "_invoke", { value: makeInvokeMethod(innerFn, self, context) }), generator; } function tryCatch(fn, obj, arg) { try { return { type: "normal", arg: fn.call(obj, arg) }; } catch (err) { return { type: "throw", arg: err }; } } exports.wrap = wrap; var ContinueSentinel = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var IteratorPrototype = {}; define(IteratorPrototype, iteratorSymbol, function () { return this; }); var getProto = Object.getPrototypeOf, NativeIteratorPrototype = getProto && getProto(getProto(values([]))); NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol) && (IteratorPrototype = NativeIteratorPrototype); var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype); function defineIteratorMethods(prototype) { ["next", "throw", "return"].forEach(function (method) { define(prototype, method, function (arg) { return this._invoke(method, arg); }); }); } function AsyncIterator(generator, PromiseImpl) { function invoke(method, arg, resolve, reject) { var record = tryCatch(generator[method], generator, arg); if ("throw" !== record.type) { var result = record.arg, value = result.value; return value && "object" == _typeof(value) && hasOwn.call(value, "__await") ? PromiseImpl.resolve(value.__await).then(function (value) { invoke("next", value, resolve, reject); }, function (err) { invoke("throw", err, resolve, reject); }) : PromiseImpl.resolve(value).then(function (unwrapped) { result.value = unwrapped, resolve(result); }, function (error) { return invoke("throw", error, resolve, reject); }); } reject(record.arg); } var previousPromise; defineProperty(this, "_invoke", { value: function value(method, arg) { function callInvokeWithMethodAndArg() { return new PromiseImpl(function (resolve, reject) { invoke(method, arg, resolve, reject); }); } return previousPromise = previousPromise ? previousPromise.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(innerFn, self, context) { var state = "suspendedStart"; return function (method, arg) { if ("executing" === state) throw new Error("Generator is already running"); if ("completed" === state) { if ("throw" === method) throw arg; return doneResult(); } for (context.method = method, context.arg = arg;;) { var delegate = context.delegate; if (delegate) { var delegateResult = maybeInvokeDelegate(delegate, context); if (delegateResult) { if (delegateResult === ContinueSentinel) continue; return delegateResult; } } if ("next" === context.method) context.sent = context._sent = context.arg;else if ("throw" === context.method) { if ("suspendedStart" === state) throw state = "completed", context.arg; context.dispatchException(context.arg); } else "return" === context.method && context.abrupt("return", context.arg); state = "executing"; var record = tryCatch(innerFn, self, context); if ("normal" === record.type) { if (state = context.done ? "completed" : "suspendedYield", record.arg === ContinueSentinel) continue; return { value: record.arg, done: context.done }; } "throw" === record.type && (state = "completed", context.method = "throw", context.arg = record.arg); } }; } function maybeInvokeDelegate(delegate, context) { var methodName = context.method, method = delegate.iterator[methodName]; if (undefined === method) return context.delegate = null, "throw" === methodName && delegate.iterator["return"] && (context.method = "return", context.arg = undefined, maybeInvokeDelegate(delegate, context), "throw" === context.method) || "return" !== methodName && (context.method = "throw", context.arg = new TypeError("The iterator does not provide a '" + methodName + "' method")), ContinueSentinel; var record = tryCatch(method, delegate.iterator, context.arg); if ("throw" === record.type) return context.method = "throw", context.arg = record.arg, context.delegate = null, ContinueSentinel; var info = record.arg; return info ? info.done ? (context[delegate.resultName] = info.value, context.next = delegate.nextLoc, "return" !== context.method && (context.method = "next", context.arg = undefined), context.delegate = null, ContinueSentinel) : info : (context.method = "throw", context.arg = new TypeError("iterator result is not an object"), context.delegate = null, ContinueSentinel); } function pushTryEntry(locs) { var entry = { tryLoc: locs[0] }; 1 in locs && (entry.catchLoc = locs[1]), 2 in locs && (entry.finallyLoc = locs[2], entry.afterLoc = locs[3]), this.tryEntries.push(entry); } function resetTryEntry(entry) { var record = entry.completion || {}; record.type = "normal", delete record.arg, entry.completion = record; } function Context(tryLocsList) { this.tryEntries = [{ tryLoc: "root" }], tryLocsList.forEach(pushTryEntry, this), this.reset(!0); } function values(iterable) { if (iterable) { var iteratorMethod = iterable[iteratorSymbol]; if (iteratorMethod) return iteratorMethod.call(iterable); if ("function" == typeof iterable.next) return iterable; if (!isNaN(iterable.length)) { var i = -1, next = function next() { for (; ++i < iterable.length;) if (hasOwn.call(iterable, i)) return next.value = iterable[i], next.done = !1, next; return next.value = undefined, next.done = !0, next; }; return next.next = next; } } return { next: doneResult }; } function doneResult() { return { value: undefined, done: !0 }; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, defineProperty(Gp, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), defineProperty(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction"), exports.isGeneratorFunction = function (genFun) { var ctor = "function" == typeof genFun && genFun.constructor; return !!ctor && (ctor === GeneratorFunction || "GeneratorFunction" === (ctor.displayName || ctor.name)); }, exports.mark = function (genFun) { return Object.setPrototypeOf ? Object.setPrototypeOf(genFun, GeneratorFunctionPrototype) : (genFun.__proto__ = GeneratorFunctionPrototype, define(genFun, toStringTagSymbol, "GeneratorFunction")), genFun.prototype = Object.create(Gp), genFun; }, exports.awrap = function (arg) { return { __await: arg }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, asyncIteratorSymbol, function () { return this; }), exports.AsyncIterator = AsyncIterator, exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) { void 0 === PromiseImpl && (PromiseImpl = Promise); var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl); return exports.isGeneratorFunction(outerFn) ? iter : iter.next().then(function (result) { return result.done ? result.value : iter.next(); }); }, defineIteratorMethods(Gp), define(Gp, toStringTagSymbol, "Generator"), define(Gp, iteratorSymbol, function () { return this; }), define(Gp, "toString", function () { return "[object Generator]"; }), exports.keys = function (val) { var object = Object(val), keys = []; for (var key in object) keys.push(key); return keys.reverse(), function next() { for (; keys.length;) { var key = keys.pop(); if (key in object) return next.value = key, next.done = !1, next; } return next.done = !0, next; }; }, exports.values = values, Context.prototype = { constructor: Context, reset: function reset(skipTempReset) { if (this.prev = 0, this.next = 0, this.sent = this._sent = undefined, this.done = !1, this.delegate = null, this.method = "next", this.arg = undefined, this.tryEntries.forEach(resetTryEntry), !skipTempReset) for (var name in this) "t" === name.charAt(0) && hasOwn.call(this, name) && !isNaN(+name.slice(1)) && (this[name] = undefined); }, stop: function stop() { this.done = !0; var rootRecord = this.tryEntries[0].completion; if ("throw" === rootRecord.type) throw rootRecord.arg; return this.rval; }, dispatchException: function dispatchException(exception) { if (this.done) throw exception; var context = this; function handle(loc, caught) { return record.type = "throw", record.arg = exception, context.next = loc, caught && (context.method = "next", context.arg = undefined), !!caught; } for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i], record = entry.completion; if ("root" === entry.tryLoc) return handle("end"); if (entry.tryLoc <= this.prev) { var hasCatch = hasOwn.call(entry, "catchLoc"), hasFinally = hasOwn.call(entry, "finallyLoc"); if (hasCatch && hasFinally) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } else if (hasCatch) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); } else { if (!hasFinally) throw new Error("try statement without catch or finally"); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } } } }, abrupt: function abrupt(type, arg) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) { var finallyEntry = entry; break; } } finallyEntry && ("break" === type || "continue" === type) && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc && (finallyEntry = null); var record = finallyEntry ? finallyEntry.completion : {}; return record.type = type, record.arg = arg, finallyEntry ? (this.method = "next", this.next = finallyEntry.finallyLoc, ContinueSentinel) : this.complete(record); }, complete: function complete(record, afterLoc) { if ("throw" === record.type) throw record.arg; return "break" === record.type || "continue" === record.type ? this.next = record.arg : "return" === record.type ? (this.rval = this.arg = record.arg, this.method = "return", this.next = "end") : "normal" === record.type && afterLoc && (this.next = afterLoc), ContinueSentinel; }, finish: function finish(finallyLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.finallyLoc === finallyLoc) return this.complete(entry.completion, entry.afterLoc), resetTryEntry(entry), ContinueSentinel; } }, "catch": function _catch(tryLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc === tryLoc) { var record = entry.completion; if ("throw" === record.type) { var thrown = record.arg; resetTryEntry(entry); } return thrown; } } throw new Error("illegal catch attempt"); }, delegateYield: function delegateYield(iterable, resultName, nextLoc) { return this.delegate = { iterator: values(iterable), resultName: resultName, nextLoc: nextLoc }, "next" === this.method && (this.arg = undefined), ContinueSentinel; } }, exports; }
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -723,18 +574,12 @@ function _toPrimitive(input, hint) { if (_typeof(input) !== "object" || input ==
 
 
 
-<<<<<<< HEAD
+
 
 var options = ["Log", "Live"];
 var signalData = [];
 var Options = options.map(function (option) {
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
-=======
-var options = ["Log", "Live"];
-var signalData = [];
-var Options = options.map(function (option) {
-  return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("option", {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
     key: option,
     value: option
   }, option);
@@ -746,31 +591,28 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
     var _this;
     _classCallCheck(this, QueryEditor);
     _this = _super.call(this, instanceSettings);
-<<<<<<< HEAD
     _defineProperty(_assertThisInitialized(_this), "BaseURL", void 0);
     _defineProperty(_assertThisInitialized(_this), "serverURL", void 0);
     _defineProperty(_assertThisInitialized(_this), "variablePattern", void 0);
     _defineProperty(_assertThisInitialized(_this), "dataType", "Log");
+    _defineProperty(_assertThisInitialized(_this), "editMode", false);
     //onPatternChange : (event : any) => void;
     _defineProperty(_assertThisInitialized(_this), "state", {
-      selectedSignals: []
+      selectedSignals: [],
+      editMode: false
     });
-=======
-    _defineProperty(_assertThisInitialized(_this), "serverURL", void 0);
-    _defineProperty(_assertThisInitialized(_this), "variablePattern", void 0);
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
     _defineProperty(_assertThisInitialized(_this), "onServerChange", function (event) {
       var _this$props = _this.props,
         onChange = _this$props.onChange,
         query = _this$props.query,
         onRunQuery = _this$props.onRunQuery;
       onChange(_extends({}, query, {
-        server: event.value
+        target: event ? event.value ? event.value : event.target.value : ""
       }));
       if (query.pattern === undefined || query.pattern === "") {
         onChange(_extends({}, query, {
-          server: event.value,
-          selectedSignals: [event.value]
+          target: event ? event.value ? event.value : event.target.value : "",
+          selectedSignals: event ? event.value ? [event.value] : [event.target.value] : []
         }));
       }
       // let sArray: any[] = [];
@@ -780,25 +622,18 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
       onRunQuery();
     });
     _defineProperty(_assertThisInitialized(_this), "onDisplayNameChange", function (event) {
-<<<<<<< HEAD
       var _this$props$data, _this$props$data$requ;
-=======
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
       var _this$props2 = _this.props,
         onChange = _this$props2.onChange,
         query = _this$props2.query,
         onRunQuery = _this$props2.onRunQuery;
       onChange(_extends({}, query, {
-        IsDisplayName: event.target.checked
+        checked: event.target.checked
       }));
       var displayData = [];
-      var type = query.dataType === "Log" ? "Log" : "Live";
-<<<<<<< HEAD
+      var type = query.type === "Log" ? "Log" : "Live";
       _this.variablePattern = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(query.pattern, (_this$props$data = _this.props.data) === null || _this$props$data === void 0 ? void 0 : (_this$props$data$requ = _this$props$data.request) === null || _this$props$data$requ === void 0 ? void 0 : _this$props$data$requ.scopedVars);
-      var displayPatterns = _this.variablePattern ? _this.variablePattern.split("|") : query.server ? query.server.split("|") : [];
-=======
-      var displayPatterns = query.pattern ? query.pattern.split("|") : query.server ? query.server.split("|") : [];
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
+      var displayPatterns = _this.variablePattern ? _this.variablePattern.split("|") : query.target ? query.target.split("|") : [];
       var _displayPattern = [];
       if (event.target.checked) {
         displayPatterns.forEach(function (p, i) {
@@ -812,11 +647,7 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
           _displayPattern.push(pat.join(".").replace("@(", "").replace(")", ""));
         });
         var displayPattern = "@(" + _displayPattern.join("|") + ")";
-<<<<<<< HEAD
         fetch(_this.BaseURL + type + "?pattern=" + displayPattern).then(function (response) {
-=======
-        fetch("https://" + _this.serverURL + "/api/realtime/" + type + "?pattern=" + displayPattern).then(function (response) {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
           return response.json();
         }).then(function (data) {
           var dName = data;
@@ -830,19 +661,19 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
           if (data.status === "error") {
             onChange(_extends({}, query, {
               displayNamesData: displayData,
-              IsDisplayName: event.target.checked
+              checked: event.target.checked
             }));
             onRunQuery();
           } else {
             onChange(_extends({}, query, {
               displayNamesData: displayData,
-              IsDisplayName: event.target.checked
+              checked: event.target.checked
             }));
             onRunQuery();
           }
         })["catch"](function (error) {
           onChange(_extends({}, query, {
-            IsDisplayName: event.target.checked,
+            checked: event.target.checked,
             selectedSignals: displayData
           }));
           console.error(error);
@@ -851,7 +682,7 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
       } else {
         onChange(_extends({}, query, {
           displayNamesData: displayData,
-          IsDisplayName: event.target.checked
+          checked: event.target.checked
         }));
         onRunQuery();
       }
@@ -862,10 +693,11 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
         query = _this$props3.query,
         onRunQuery = _this$props3.onRunQuery;
       onChange(_extends({}, query, {
-        dataType: event.target.value
+        type: event.target.value,
+        target: ""
       }));
       // executes the query
-      query.server = "";
+      query.target = "";
       _this.getSignals(event.target.value);
       onRunQuery();
     });
@@ -875,7 +707,7 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
         query = _this$props4.query,
         onRunQuery = _this$props4.onRunQuery;
       onChange(_extends({}, query, {
-        aliasName: event.target.value
+        alias: event.target.value
       }));
       // executes the query
       onRunQuery();
@@ -892,10 +724,7 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
       onRunQuery();
     });
     _defineProperty(_assertThisInitialized(_this), "onPatternChange", function (event) {
-<<<<<<< HEAD
       var _this$props$data2, _this$props$data2$req;
-=======
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
       var _this$props6 = _this.props,
         onChange = _this$props6.onChange,
         query = _this$props6.query,
@@ -903,32 +732,24 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
       //query.pattern = undefined;
       var logData = [];
       var pattern = "";
-      var type = query.dataType === "Log" ? "Log" : "Live";
+      var type = query.type === "Log" ? "Log" : "Live";
       onChange(_extends({}, query, {
         pattern: event.target.value,
         selectedSignals: logData
       }));
       onRunQuery();
-<<<<<<< HEAD
       _this.variablePattern = (0,_grafana_runtime__WEBPACK_IMPORTED_MODULE_2__.getTemplateSrv)().replace(event.target.value, (_this$props$data2 = _this.props.data) === null || _this$props$data2 === void 0 ? void 0 : (_this$props$data2$req = _this$props$data2.request) === null || _this$props$data2$req === void 0 ? void 0 : _this$props$data2$req.scopedVars);
       if (event.target.value !== "") {
         pattern = "@(" + _this.variablePattern + ")";
       }
       console.log("" + _this.variablePattern);
       fetch(_this.BaseURL + type + "/signals?pattern=" + pattern).then(function (response) {
-=======
-      if (event.target.value !== "") {
-        pattern = "@(" + event.target.value + ")";
-      }
-      console.log("" + _this.variablePattern);
-      fetch("https://" + _this.serverURL + "/api/realtime/" + type + "/signals?pattern=" + pattern).then(function (response) {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
         return response.json();
       }).then(function (data) {
         logData = data;
         if (data.status === "error") {
           onChange(_extends({}, query, {
-            selectedSignals: [query.server],
+            selectedSignals: [query.target],
             pattern: event.target.value
           }));
           onRunQuery();
@@ -947,52 +768,26 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
         console.error(error);
       });
     });
+    _defineProperty(_assertThisInitialized(_this), "onTextToggleChange", function (event) {
+      _this.setState({
+        editMode: !_this.state.editMode
+      });
+      console.log(event);
+    });
     _this.serverURL = instanceSettings.datasource.serverURL || '';
     _this.variablePattern = instanceSettings.datasource.variablePattern || "";
-<<<<<<< HEAD
     _this.BaseURL = _this.serverURL.replace("host", window.location.origin);
     var _query = lodash_defaults__WEBPACK_IMPORTED_MODULE_1___default()(_this.props.query, _types__WEBPACK_IMPORTED_MODULE_4__.defaultQuery);
     console.log("signals:" + signalData);
-    _query.dataType = _query.dataType ? _query.dataType : "Log";
-    _this.getSignals(_query.dataType);
-=======
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
-
-    // this.OnInit()
+    _query.type = _query.type ? _query.type : "Log";
+    _this.getSignals(_query.type);
     return _this;
   }
   _createClass(QueryEditor, [{
-<<<<<<< HEAD
     key: "getSignals",
     value: function () {
       var _getSignals = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(type) {
         var _this2 = this;
-=======
-    key: "OnInit",
-    value: function OnInit() {
-
-      // // call api or anything
-      // signalData = [];
-      // let logData: any[] = [];
-      // fetch("http://liveserver-bridge:8080/live/signals?pattern=" + "*")
-      // .then(response => response.json())
-      // .then(data => {
-      //   signalData = [];
-      //   logData = data
-      //   let slicesData: any = logData;
-      //   slicesData.map((option: any, i: any) => {
-      //     signalData.push({label : option , value : option})
-      //   });
-      // })
-      // .catch(error => {
-      //   console.error(error)
-      // });
-    }
-  }, {
-    key: "getSignals",
-    value: function () {
-      var _getSignals = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(type) {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
         var logData;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
@@ -1000,28 +795,21 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
               signalData = [];
               logData = [];
               _context.next = 4;
-<<<<<<< HEAD
               return fetch(this.BaseURL + type + "/signals?pattern=*").then(function (response) {
-=======
-              return fetch("https://" + this.serverURL + "/api/realtime/" + type + "/signals?pattern=*").then(function (response) {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
                 return response.json();
               }).then(function (data) {
                 signalData = [];
                 logData = data;
                 var slicesData = logData;
-                slicesData.map(function (option, i) {
-                  signalData.push({
-                    label: option,
-                    value: option
-                  });
+                signalData = lodash__WEBPACK_IMPORTED_MODULE_5___default().map(slicesData, function (v, i) {
+                  return {
+                    label: v,
+                    value: v
+                  };
                 });
-<<<<<<< HEAD
                 _this2.setState({
                   selectedSignals: signalData
                 });
-=======
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
               })["catch"](function (error) {
                 console.error(error);
               });
@@ -1039,27 +827,19 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
   }, {
     key: "render",
     value: function render() {
-<<<<<<< HEAD
       var query = lodash_defaults__WEBPACK_IMPORTED_MODULE_1___default()(this.props.query, _types__WEBPACK_IMPORTED_MODULE_4__.defaultQuery);
       console.log("signals:" + signalData);
-      query.dataType = query.dataType ? query.dataType : "Log";
+      query.type = query.type ? query.type : "Log";
       //let newPattern = getTemplateSrv().replace(query.pattern, this.props.data?.request?.scopedVars);
 
       //console.log("signals:" + this.variablePattern,newPattern)
 
-=======
-      var query = lodash_defaults__WEBPACK_IMPORTED_MODULE_0___default()(this.props.query, _types__WEBPACK_IMPORTED_MODULE_3__.defaultQuery);
-      console.log("signals:" + signalData);
-      query.dataType = query.dataType ? query.dataType : "Log";
-      //this.getSignals(query.dataType)
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
-      var server = query.server,
-        dataType = query.dataType,
-        IsDisplayName = query.IsDisplayName,
-        aliasName = query.aliasName,
+      var target = query.target,
+        type = query.type,
+        checked = query.checked,
+        alias = query.alias,
         scale = query.scale,
         pattern = query.pattern;
-<<<<<<< HEAD
       return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "gf-form-group"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -1068,113 +848,70 @@ var QueryEditor = /*#__PURE__*/function (_PureComponent) {
         className: "gf-form-label query-keyword width-10"
       }, "Select Type")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", {
         className: "gf-form-label",
-        value: dataType,
+        value: type,
         onChange: this.onDataTypeChange
-      }, Options), _label2 || (_label2 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+      }, Options), this.state.editMode && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", {
+        className: "gf-form-input",
+        value: target,
+        onChange: this.onServerChange
+      }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
         className: "gf-form-label query-keyword width-10"
-      }, "Select Signal")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_grafana_ui__WEBPACK_IMPORTED_MODULE_3__.Select, {
-=======
-      return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form-group"
-      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form-inline"
-      }, _label || (_label = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
-        className: "gf-form-label query-keyword width-10"
-      }, "Select Type")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("select", {
+      }, "Select Signal", /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
+        className: "fal fa-edit",
+        onClick: this.onTextToggleChange
+      })), !this.state.editMode && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_grafana_ui__WEBPACK_IMPORTED_MODULE_3__.Select, {
         className: "gf-form-label",
-        value: dataType,
-        onChange: this.onDataTypeChange
-      }, Options), _label2 || (_label2 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
-        className: "gf-form-label query-keyword width-10"
-      }, "Select Signal")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement(_grafana_ui__WEBPACK_IMPORTED_MODULE_2__.Select, {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
-        className: "gf-form-label width-10",
         isMulti: false,
+        id: "signalDropdownID",
         isClearable: true,
-        backspaceRemovesValue: false,
+        width: "auto",
+        backspaceRemovesValue: false
+        //onInputChange ={this.getsearchedSignals()}
+        ,
         onChange: this.onServerChange,
-<<<<<<< HEAD
         options: this.state.selectedSignals,
-=======
-        options: signalData,
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
         isSearchable: true,
         placeholder: "",
-        value: server,
+        value: target,
         noOptionsMessage: 'No options found'
-<<<<<<< HEAD
       })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+        className: "gf-form"
+      }, _label2 || (_label2 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+        className: "gf-form-label query-keyword width-10"
+      }, "DisplayNames")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+        className: "gf-form max-width-4"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_grafana_ui__WEBPACK_IMPORTED_MODULE_3__.Switch, {
+        value: checked,
+        onChange: this.onDisplayNameChange
+      }))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "gf-form"
       }, _label3 || (_label3 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-        className: "gf-form-label query-keyword width-10"
-      }, "DisplayNames")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_grafana_ui__WEBPACK_IMPORTED_MODULE_3__.Switch, {
-        value: IsDisplayName,
-        onChange: this.onDisplayNameChange
-      })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-        className: "gf-form"
-      }, _label4 || (_label4 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
         className: "gf-form-label query-keyword width-10"
       }, "Alias")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "gf-form max-width-8"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
-=======
-      })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form"
-      }, _label3 || (_label3 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
-        className: "gf-form-label query-keyword width-10"
-      }, "DisplayNames")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement(_grafana_ui__WEBPACK_IMPORTED_MODULE_2__.Switch, {
-        value: IsDisplayName,
-        onChange: this.onDisplayNameChange
-      })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form"
-      }, _label4 || (_label4 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
-        className: "gf-form-label query-keyword width-10"
-      }, "Alias")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form max-width-8"
-      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("input", {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
         className: "gf-form-input",
-        value: aliasName,
+        value: alias,
         onChange: this.onAliasnameChange,
         placeholder: "Alias"
-<<<<<<< HEAD
       }))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "gf-form"
-      }, _label5 || (_label5 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+      }, _label4 || (_label4 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
         className: "gf-form-label query-keyword width-10"
       }, "Scale")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "gf-form max-width-8"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
-=======
-      }))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form"
-      }, _label5 || (_label5 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
-        className: "gf-form-label query-keyword width-10"
-      }, "Scale")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form max-width-8"
-      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("input", {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
         className: "gf-form-input",
         value: scale,
         placeholder: "Multiplier",
         onChange: this.onScaleChange
-<<<<<<< HEAD
       })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "gf-form"
-      }, _label6 || (_label6 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+      }, _label5 || (_label5 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
         className: "gf-form-label query-keyword width-10"
       }, "Pattern")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "gf-form max-width-8"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
-=======
-      })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form"
-      }, _label6 || (_label6 = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("label", {
-        className: "gf-form-label query-keyword width-10"
-      }, "Pattern")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("div", {
-        className: "gf-form max-width-8"
-      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("input", {
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
         className: "gf-form-input",
         value: pattern,
         placeholder: "Redis Pattern",
@@ -1199,12 +936,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "defaultQuery": () => (/* binding */ defaultQuery)
 /* harmony export */ });
 var defaultQuery = {
-<<<<<<< HEAD
-=======
-  capacity: 1000,
-  timeoutS: 30,
->>>>>>> 317ad19e9be0f0eadd4dfa4faf0b5ffe3dd43ee8
-  IsDisplayName: false
+  checked: false
   // dataType : "Streaming"
 
   //server: "ws://test:8080",
@@ -2910,6 +2642,17 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__grafana_ui__;
 
 /***/ }),
 
+/***/ "lodash":
+/*!*************************!*\
+  !*** external "lodash" ***!
+  \*************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = __WEBPACK_EXTERNAL_MODULE_lodash__;
+
+/***/ }),
+
 /***/ "react":
 /*!************************!*\
   !*** external "react" ***!
@@ -3044,10 +2787,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-//import { VariableQueryEditor } from './VariableQueryEditor';
+//import { Query_ctrl } from 'Query_ctrl';
 
-var plugin = new _grafana_data__WEBPACK_IMPORTED_MODULE_0__.DataSourcePlugin(_DataSource__WEBPACK_IMPORTED_MODULE_1__.DataSource).setConfigEditor(_ConfigEditor__WEBPACK_IMPORTED_MODULE_2__.ConfigEditor).setQueryEditor(_QueryEditor__WEBPACK_IMPORTED_MODULE_3__.QueryEditor);
-// .setVariableQueryEditor(VariableQueryEditor);
+var plugin = new _grafana_data__WEBPACK_IMPORTED_MODULE_0__.DataSourcePlugin(_DataSource__WEBPACK_IMPORTED_MODULE_1__.DataSource).setConfigEditor(_ConfigEditor__WEBPACK_IMPORTED_MODULE_2__.ConfigEditor)
+//.setQueryCtrl(Query_ctrl)
+.setQueryEditor(_QueryEditor__WEBPACK_IMPORTED_MODULE_3__.QueryEditor);
 })();
 
 /******/ 	return __webpack_exports__;

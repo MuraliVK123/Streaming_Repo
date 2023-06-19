@@ -6,11 +6,10 @@ import defaults from 'lodash/defaults';
 import { getTemplateSrv } from '@grafana/runtime';
 
 import { Select, Switch } from '@grafana/ui';
-import { QueryEditorProps, SelectableValue } from '@grafana/data';
+import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from './DataSource';
 import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
-
-
+import _, {__} from 'lodash'
 
 
    const options = [
@@ -28,15 +27,18 @@ import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
+
 export class QueryEditor extends PureComponent<Props> {
   
   BaseURL: any;
   serverURL: string;
   variablePattern: string;
   dataType = "Log"
+  editMode = false;
   //onPatternChange : (event : any) => void;
-   
-  state = {selectedSignals : []}
+
+  state = {selectedSignals : [],editMode : false}
+
 
 
   constructor(instanceSettings: Props) {
@@ -44,15 +46,12 @@ export class QueryEditor extends PureComponent<Props> {
     this.serverURL = instanceSettings.datasource.serverURL || '';
     this.variablePattern = instanceSettings.datasource.variablePattern || ""
     this.BaseURL = this.serverURL.replace("host",window.location.origin)
-
     const query = defaults(this.props.query, defaultQuery);
     console.log("signals:" + signalData)
-    query.dataType = query.dataType ? query.dataType : "Log"
-    this.getSignals(query.dataType)
-
-   // this.OnInit()
-
+    query.type = query.type ? query.type : "Log"
+    this.getSignals(query.type);
   }
+
 
 
   async getSignals(type: string){
@@ -64,9 +63,11 @@ export class QueryEditor extends PureComponent<Props> {
       signalData = [];
       logData = data
       let slicesData: any = logData;
-      slicesData.map((option: any, i: any) => {
-        signalData.push({label : option , value : option})
-      });
+     
+      signalData = _.map(slicesData, function(v,i){
+        return { label: v, value: v }
+      })
+
       this.setState({selectedSignals : signalData})
     })
     .catch(error => {
@@ -75,11 +76,11 @@ export class QueryEditor extends PureComponent<Props> {
     
   }
 
-  onServerChange = (event: SelectableValue<string>) => {
+  onServerChange = (event: any) => {
     const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, server: event.value});
+    onChange({ ...query, target: event ? event.value ? event.value : event.target.value : ""});
     if(query.pattern === undefined || query.pattern === ""){
-      onChange({ ...query, server: event.value , selectedSignals : [event.value]});
+      onChange({ ...query, target: event ? event.value ? event.value : event.target.value : "" , selectedSignals : event ? event.value ? [event.value] : [event.target.value] : []});
     }
     // let sArray: any[] = [];
     // sArray.push(event.value);
@@ -90,12 +91,12 @@ export class QueryEditor extends PureComponent<Props> {
   onDisplayNameChange = (event: ChangeEvent<HTMLInputElement>) => {
 
     const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, IsDisplayName: event.target.checked });
+    onChange({ ...query, checked: event.target.checked });
     let displayData: any[] = [];
-    let type = query.dataType === "Log" ? "Log":"Live";
+    let type = query.type === "Log" ? "Log":"Live";
     this.variablePattern = getTemplateSrv().replace(query.pattern, this.props.data?.request?.scopedVars);
 
-    let displayPatterns = this.variablePattern ? this.variablePattern.split("|") : (query.server ? query.server.split("|") : []) ;
+    let displayPatterns = this.variablePattern ? this.variablePattern.split("|") : (query.target ? query.target.split("|") : []) ;
     let _displayPattern: any = [];
    if(event.target.checked){
     displayPatterns.forEach((p, i) => {
@@ -122,22 +123,22 @@ export class QueryEditor extends PureComponent<Props> {
       })
      
       if(data.status === "error"){
-        onChange({ ...query,displayNamesData:displayData,IsDisplayName:event.target.checked });
+        onChange({ ...query,displayNamesData:displayData,checked:event.target.checked });
         onRunQuery();
       }else{
-        onChange({ ...query,displayNamesData:displayData,IsDisplayName:event.target.checked });
+        onChange({ ...query,displayNamesData:displayData,checked:event.target.checked });
         onRunQuery();
       }
       
     })
     .catch(error =>{
-      onChange({ ...query, IsDisplayName: event.target.checked,selectedSignals:displayData });
+      onChange({ ...query, checked: event.target.checked,selectedSignals:displayData });
       console.error(error)
     });
 
     onRunQuery();
    }else{
-    onChange({ ...query,displayNamesData:displayData,IsDisplayName:event.target.checked });
+    onChange({ ...query,displayNamesData:displayData,checked:event.target.checked });
     onRunQuery();
    }
     
@@ -148,17 +149,17 @@ export class QueryEditor extends PureComponent<Props> {
   
   onDataTypeChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, dataType: event.target.value });
+    onChange({ ...query, type: event.target.value,target : "" });
     // executes the query
-    query.server = "";
+    query.target = "";
     this.getSignals(event.target.value);
     onRunQuery();
-    
-
   };
+
+
   onAliasnameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, aliasName: event.target.value });
+    onChange({ ...query, alias: event.target.value });
     // executes the query
     onRunQuery();
 
@@ -176,7 +177,7 @@ export class QueryEditor extends PureComponent<Props> {
     //query.pattern = undefined;
     let logData: any[] = [];
     let pattern = ""
-    let type = query.dataType === "Log" ? "Log":"Live";
+    let type = query.type === "Log" ? "Log":"Live";
     onChange({ ...query, pattern: event.target.value,selectedSignals:logData });
     onRunQuery();
     this.variablePattern = getTemplateSrv().replace(event.target.value, this.props.data?.request?.scopedVars);
@@ -192,7 +193,7 @@ export class QueryEditor extends PureComponent<Props> {
     .then(data => {
       logData = data
       if(data.status === "error"){
-        onChange({ ...query,selectedSignals:[query.server],pattern:event.target.value });
+        onChange({ ...query,selectedSignals:[query.target],pattern:event.target.value });
         onRunQuery();
       }else{
         onChange({ ...query,selectedSignals:logData,pattern:event.target.value });
@@ -209,49 +210,67 @@ export class QueryEditor extends PureComponent<Props> {
 
   };
 
+  onTextToggleChange = (event: any) => {
+    this.setState({editMode : !this.state.editMode})
+    console.log(event);
+
+  };
+
+  
   render() {
 
     const query = defaults(this.props.query, defaultQuery);
     console.log("signals:" + signalData)
-    query.dataType = query.dataType ? query.dataType : "Log"
+    query.type = query.type ? query.type : "Log"
     //let newPattern = getTemplateSrv().replace(query.pattern, this.props.data?.request?.scopedVars);
 
     //console.log("signals:" + this.variablePattern,newPattern)
+    
 
 
-
-    const { server,dataType,IsDisplayName,aliasName,scale,pattern } = query;
+    const { target,type,checked,alias,scale,pattern } = query;
     
         return (
           <div className="gf-form-group">
             <div className="gf-form-inline">
             <label className="gf-form-label query-keyword width-10">Select Type</label>
             <select  className="gf-form-label"
-                 value={dataType} 
+                 value={type} 
                  onChange={this.onDataTypeChange} >
              {Options}
              </select>
-             <label className="gf-form-label query-keyword width-10">Select Signal</label>
+             {
+              this.state.editMode && <textarea className="gf-form-input" value={target} onChange={this.onServerChange}></textarea>
+             }
+             <label className="gf-form-label query-keyword width-10">Select Signal<button className="fal fa-edit" onClick={this.onTextToggleChange}/></label>
+             {!this.state.editMode &&   
                <Select
-                  className="gf-form-label width-10"
+                  className="gf-form-label"
                   isMulti={false}
+                  id='signalDropdownID'
                   isClearable={true}
+                  width = "auto"
                   backspaceRemovesValue={false}
+                  //onInputChange ={this.getsearchedSignals()}
                   onChange={this.onServerChange}
                   options={this.state.selectedSignals}
                   isSearchable={true}
                   placeholder= ""
-                  value={server}
+                  value={target}
                   noOptionsMessage={'No options found'}></Select>
+                  }
+                 
             </div>
             <div className="gf-form">
               <label className="gf-form-label query-keyword width-10">DisplayNames</label>
-              <Switch value = {IsDisplayName} onChange={this.onDisplayNameChange}/> 
+              <div className="gf-form max-width-4">
+              <Switch value = {checked} onChange={this.onDisplayNameChange}/> 
+              </div>
             </div>
             <div className="gf-form">
              <label className="gf-form-label query-keyword width-10">Alias</label>
              <div className="gf-form max-width-8">
-             <input className="gf-form-input" value={aliasName} onChange={this.onAliasnameChange} placeholder="Alias" ></input>
+             <input className="gf-form-input" value={alias} onChange={this.onAliasnameChange} placeholder="Alias" ></input>
              </div>
             </div>
             <div className="gf-form">

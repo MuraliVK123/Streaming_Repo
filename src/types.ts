@@ -1,23 +1,22 @@
 import { DataQuery, DataSourceJsonData } from '@grafana/data';
 
 export interface MyQuery extends DataQuery {
-  queryText?: string;
-  server?: string;
-  capacity: number;
-  timeoutS: number;
-  dataType?: string;
-  IsDisplayName?: boolean;
-  aliasName?: string;
+  target?: string;
+  type?: string;
+  checked?: boolean;
+  alias?: string;
   scale?: string;
   pattern?: string;
   selectedSignals: any;
   displayNamesData: any;
-  
+  rawQuery?: boolean
+ 
+
 }
 
 export const defaultQuery: Partial<MyQuery> = {
  
-  IsDisplayName : false,
+  checked : false,
  // dataType : "Streaming"
 
   //server: "ws://test:8080",

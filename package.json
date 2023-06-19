@@ -8,7 +8,7 @@
     "dev": "grafana-toolkit plugin:dev",
     "watch": "grafana-toolkit plugin:dev --watch"
   },
-  "repository": "github:hse-electronics/hse-streaming-source",  
+  "repository": "github:hse-electronics/hse-streaming-source",
   "bugs": {
     "url": "https://github.com/hse-electronics/hse-streaming-source/issues",
     "email": "plugins@hse-electronics.com"

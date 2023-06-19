@@ -13,8 +13,9 @@ import {
 } from '@grafana/data';
 import { getTemplateSrv } from '@grafana/runtime';
 import { Observable, merge } from 'rxjs';
-
+//import {switchMap,takeUntil} from 'rxjs/operators'
 import { MyQuery, MyDataSourceOptions, defaultQuery } from './types';
+//import { delay } from 'lodash';
 //import { TimeSeries } from '@grafana/ui';
  
 
@@ -26,6 +27,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
   variablePattern: any;
   dataType: any;
   BaseURL: any;
+  SelectSignal: any;
 
 
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -33,27 +35,29 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
     this.serverURL = instanceSettings.jsonData.url || 'ws://localhost:8181';
     this.BaseURL = this.serverURL.replace("host",window.location.origin)
     this.wssUrl = this.serverURL.replace("host","wss://" + window.location.host);
+
   }
 
     query(options: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
-      
-      
-      
-      const observables = options.targets.map(target => {
+
+      const observables = options.targets.map(async (target) =>  {
       
         let URL = window.location.origin
         console.log(URL)
       const query = defaults(target, defaultQuery);
-      query.dataType = query.dataType ? query.dataType : "";
-      this.dataType = query.dataType;
+      query.type = query.type ? query.type : "";
+      this.dataType = query.type;
       query.pattern = getTemplateSrv().replace(query.pattern, options.scopedVars);
-      query.aliasName = getTemplateSrv().replace(query.aliasName, options.scopedVars);
+      query.alias = getTemplateSrv().replace(query.alias, options.scopedVars);
       query.scale = getTemplateSrv().replace(query.scale, options.scopedVars);
-      query.server = query.server ? query.server : "";
-      
+      query.target = query.target ? query.target : "";
+      this.processData(query.pattern,query.type);
+      query.selectedSignals = await this.processData(query.pattern,query.type)
+      //let obser = new Observable<DataQueryResponse>();
+     // const stopSignal: Subject<void> = new Subject<void>()
         
-        return new Observable<DataQueryResponse>(subscriber => {
-          
+       return new Observable<DataQueryResponse>((subscriber) => {
+                 console.log(this.SelectSignal);
                  let signalString = ""
                  
                  let dataField: any[]  = []
@@ -72,7 +76,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                  let streamingData: any;
                  //let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
            
-                   let server = this.wssUrl + query.dataType + "?db=global" + signalString;
+                   let server = this.wssUrl + query.type + "?db=global" + signalString;
  
                    const connection = new WebSocket(server);
                    let interval: NodeJS.Timeout;
@@ -85,6 +89,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                    };
                    
                    connection.onmessage = (event: any) => {
+
+
+                    
                      let jsonData = JSON.parse(event.data);
                      console.log(jsonData);
                      //let finalData = jsonData[query.server ? query.server : 0]
@@ -93,8 +100,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                      console.log("finaldata" + finalData);
                      let frameData: any = [];
                      let aliasName: any;
-                     if(query.aliasName){
-                         aliasName = query.aliasName;
+                     if(query.alias){
+                         aliasName = query.alias;
                      }
                      if(!isStreaming){
                        streamingData = finalData;
@@ -114,13 +121,13 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                          if(finalData[sig] !== undefined && isStreaming){
                            streamingData[sig] = finalData[sig];
                          }
-                         if(signalArray.length === 1 && query.aliasName !== undefined && aliasName !== undefined)
+                         if(signalArray.length === 1 && query.alias !== undefined && aliasName !== undefined)
                          {
                            frameData[aliasName] = value
                          }else{
                            frameData[sig] = value                     
                          }
-                       if(query.IsDisplayName){
+                       if(query.checked){
                          let Display: any = sig.split(".");
                          Display.pop();
                          let DisplayString = Display.join(".");
@@ -138,7 +145,6 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                          let frame: any = {}
                          frame["frame"+count] = new CircularDataFrame({
                           append: 'tail',
-                          capacity: query.capacity || 1000,
                         });
                         if (frame["frame"+count].fields.length <= 1) {
                         
@@ -156,23 +162,25 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                         };
                         frame["frame"+count].add(frameData);
                          
-                 
-                        //this.queryResponse((subscriber : any) => {
+                       
                           subscriber.next({
-                            //data:  [toDataFrame(frame.fields)],
-                            //data:  [Object.values(frame.fields[0].values)],
                             data: [frame["frame"+count]],
                             key: query.refId + count,
                             state: LoadingState.Streaming,
-                          });
-                          count=count + 1
+                          })
+                        
+                         count=count + 1
+
+                         //return observable
+                        //this.queryResponse((subscriber : any) => {
+                          
                        // })
                        }
                          
                       
                      }
                      })
-                     if(query.IsDisplayName && query.displayNamesData.length > 0){
+                     if(query.checked && query.displayNamesData.length > 0){
                        query.displayNamesData.map((sig: any) => {
                          if(streamingData[sig.signalName] !== undefined){
                            let DisplayString: any = sig.signalName.split(".");
@@ -212,17 +220,16 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                           frame["frame"+count].add(frameData);
                            
       
-                          subscriber.next({
-                            //data:  [toDataFrame(frame.fields)],
-                            //data:  [Object.values(frame.fields[0].values)],
-                            data: [frame["frame"+count]],
-                            key: query.refId + count,
-                            state: LoadingState.Streaming,
-                          });
-                          count=count + 1
-                         
-                           
-                        
+                          
+                            subscriber.next({
+                              data: [frame["frame"+count]],
+                              key: query.refId + count,
+                              state: LoadingState.Streaming,
+                            })
+                      
+                           count=count + 1
+
+                           //return observable
                        }
                        else if(query.displayNamesData.length === 1 && signalArray.length === 1){
                          frameData = {};
@@ -249,19 +256,18 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                         
                           };
                           frame["frame"+count].add(frameData);
+
+                            subscriber.next({
+                              data: [frame["frame"+count]],
+                              key: query.refId + count,
+                              state: LoadingState.Streaming,
+                            })
                            
-      
-                          subscriber.next({
-                            //data:  [toDataFrame(frame.fields)],
-                            //data:  [Object.values(frame.fields[0].values)],
-                            data: [frame["frame"+count]],
-                            key: query.refId + count,
-                            state: LoadingState.Streaming,
-                          });
-                          count=count + 1
+                           count=count + 1
+                          // return observable
                        }
                        })
-                      
+
                      }
                    };
            
@@ -273,14 +279,44 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                      connection.close(1000, "Dashboard closed");
                    }
          }); 
-       
-          
+
+        
     });
     console.log(...observables);
     return merge(...observables);
     }
 
-  
+    delay(ms: number): Promise<void> {
+      return new Promise<void>((resolve) => {
+        setTimeout(()=> {
+          resolve();
+        },ms)
+      })
+    }
+
+    async processData(pattern: string,type: string): Promise<string[]> {
+      let signalArray: any = [];
+      try{
+        await fetch(this.BaseURL + type + "/signals?pattern=" + pattern)
+        .then(response => response.json())
+        .then(data => {
+          this.SelectSignal = data
+          return signalArray;
+          
+        })
+        .catch(error =>{
+          return signalArray
+        });
+      }
+      catch(ex){
+        return signalArray
+      }
+      return signalArray
+      
+      
+    }
+
+
   async testDatasource() {
     await fetch(this.BaseURL + "live/signals?pattern=*")
     .then(response => response.json())
@@ -306,5 +342,17 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
     });
     // TODO: Implement a health check for your data source.
     
+  }
+
+  metricFindQuery(query: any, options?: any): any {
+    console.log(query,options)
+  }
+
+  toggleEditorMode() {
+    const query = {
+      "rawQuery" : true
+    }
+
+    query.rawQuery = !query.rawQuery;
   }
 }
