@@ -7,11 +7,7 @@ export interface MyQuery extends DataQuery {
   alias?: string;
   scale?: string;
   pattern?: string;
-  selectedSignals: any;
-  displayNamesData: any;
   rawQuery?: boolean
- 
-
 }
 
 export const defaultQuery: Partial<MyQuery> = {

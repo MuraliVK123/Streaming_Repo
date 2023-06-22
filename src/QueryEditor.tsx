@@ -3,12 +3,11 @@ import React, { ChangeEvent, PureComponent} from 'react';
 import defaults from 'lodash/defaults';
 
 
-import { getTemplateSrv } from '@grafana/runtime';
 
 import { Select, Switch } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
-import { DataSource } from './DataSource';
-import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
+import { DataSource } from 'DataSource';
+import { defaultQuery, MyDataSourceOptions, MyQuery } from 'types';
 import _, {__} from 'lodash'
 
 
@@ -79,70 +78,13 @@ export class QueryEditor extends PureComponent<Props> {
   onServerChange = (event: any) => {
     const { onChange, query, onRunQuery } = this.props;
     onChange({ ...query, target: event ? event.value ? event.value : event.target.value : ""});
-    if(query.pattern === undefined || query.pattern === ""){
-      onChange({ ...query, target: event ? event.value ? event.value : event.target.value : "" , selectedSignals : event ? event.value ? [event.value] : [event.target.value] : []});
-    }
-    // let sArray: any[] = [];
-    // sArray.push(event.value);
-    // query.selectedSignals = sArray;
-    // executes the query
     onRunQuery();
   };
   onDisplayNameChange = (event: ChangeEvent<HTMLInputElement>) => {
 
     const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, checked: event.target.checked });
-    let displayData: any[] = [];
-    let type = query.type === "Log" ? "Log":"Live";
-    this.variablePattern = getTemplateSrv().replace(query.pattern, this.props.data?.request?.scopedVars);
-
-    let displayPatterns = this.variablePattern ? this.variablePattern.split("|") : (query.target ? query.target.split("|") : []) ;
-    let _displayPattern: any = [];
-   if(event.target.checked){
-    displayPatterns.forEach((p, i) => {
-      let pat = p.split(".");
-      if(pat.length > 1){
-        pat.pop();
-      }
-      if(!p.includes("displayName")){
-        pat.push("*displayName");
-      }
-      _displayPattern.push(pat.join(".").replace("@(","").replace(")",""));
-    });
-    let displayPattern = "@("+_displayPattern.join("|")+")";
-    fetch(this.BaseURL+ type + "?pattern=" + displayPattern)
-    .then(response => response.json())
-    .then(data => {
-      let dName = data
-      Object.keys(dName).forEach(function (k) {
-        let d = {
-          signalName : dName[k].name,
-          displayName : dName[k].value
-        }
-        displayData.push(d);
-      })
-     
-      if(data.status === "error"){
-        onChange({ ...query,displayNamesData:displayData,checked:event.target.checked });
-        onRunQuery();
-      }else{
-        onChange({ ...query,displayNamesData:displayData,checked:event.target.checked });
-        onRunQuery();
-      }
-      
-    })
-    .catch(error =>{
-      onChange({ ...query, checked: event.target.checked,selectedSignals:displayData });
-      console.error(error)
-    });
-
+    onChange({ ...query,checked:event.target.checked });
     onRunQuery();
-   }else{
-    onChange({ ...query,displayNamesData:displayData,checked:event.target.checked });
-    onRunQuery();
-   }
-    
-
   };
 
 
@@ -175,39 +117,11 @@ export class QueryEditor extends PureComponent<Props> {
 
     const { onChange, query, onRunQuery } = this.props;
     //query.pattern = undefined;
-    let logData: any[] = [];
-    let pattern = ""
-    let type = query.type === "Log" ? "Log":"Live";
-    onChange({ ...query, pattern: event.target.value,selectedSignals:logData });
+    //let logData: any[] = [];
+    //let pattern = ""
+    //let type = query.type === "Log" ? "Log":"Live";
+    onChange({ ...query, pattern: event.target.value });
     onRunQuery();
-    this.variablePattern = getTemplateSrv().replace(event.target.value, this.props.data?.request?.scopedVars);
-
-    if(event.target.value !== ""){
-       pattern =  "@("+ this.variablePattern + ")"
-    }
-   
-    console.log("" + this.variablePattern);
-
-    fetch(this.BaseURL + type + "/signals?pattern=" + pattern)
-    .then(response => response.json())
-    .then(data => {
-      logData = data
-      if(data.status === "error"){
-        onChange({ ...query,selectedSignals:[query.target],pattern:event.target.value });
-        onRunQuery();
-      }else{
-        onChange({ ...query,selectedSignals:logData,pattern:event.target.value });
-        onRunQuery();
-      }
-      
-    })
-    .catch(error =>{
-      onChange({ ...query, pattern: event.target.value,selectedSignals:logData });
-      console.error(error)
-    });
-
-    
-
   };
 
   onTextToggleChange = (event: any) => {

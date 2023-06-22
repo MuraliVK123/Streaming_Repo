@@ -38,45 +38,49 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
 
   }
 
-    query(options: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
+   query(options: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
 
-      const observables = options.targets.map(async (target) =>  {
-      
-        let URL = window.location.origin
-        console.log(URL)
+
+      const observables = options.targets.map((target) =>  {
+      let displayNamesData: any[] = [];
+      let URL = window.location.origin
+      console.log(URL)
       const query = defaults(target, defaultQuery);
       query.type = query.type ? query.type : "";
+      query.target = query.target ||  "";
+
       this.dataType = query.type;
       query.pattern = getTemplateSrv().replace(query.pattern, options.scopedVars);
       query.alias = getTemplateSrv().replace(query.alias, options.scopedVars);
       query.scale = getTemplateSrv().replace(query.scale, options.scopedVars);
       query.target = query.target ? query.target : "";
-      this.processData(query.pattern,query.type);
-      query.selectedSignals = await this.processData(query.pattern,query.type)
+     
+     
       //let obser = new Observable<DataQueryResponse>();
      // const stopSignal: Subject<void> = new Subject<void>()
         
-       return new Observable<DataQueryResponse>((subscriber) => {
+       return new Observable<DataQueryResponse>((subscriber: any) => {
+
                  console.log(this.SelectSignal);
-                 let signalString = ""
                  
                  let dataField: any[]  = []
                  //console.log(frame);
-                 query.selectedSignals = query.selectedSignals ? query.selectedSignals : [];
-                 const signalArray: any[] = query.selectedSignals
-                 if(query.selectedSignals.length > 0){
-                   dataField.push("timestamp")
-                   signalArray.map((sig) => {
-                      signalString = signalString + "&signal=" + sig;
-                      dataField.push(sig)
-                   })
-                 }
+                 const signalArray: any[] = []
+                
                  
                  let isStreaming = false;
                  let streamingData: any;
                  //let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
-           
-                   let server = this.wssUrl + query.type + "?db=global" + signalString;
+                   
+                   let server = this.wssUrl + query.type + "?db=global" + "&signal=" + query.target;
+                   if(query.pattern){
+                    server = this.wssUrl + query.type + "?db=global" + "&pattern=" + query.pattern;
+                   }else if(query.checked){
+                    let Display: any = query.target?.split(".");
+                    Display.pop();
+                    let DisplayString = Display.join(".");
+                    server = this.wssUrl + query.type + "?db=global" + "&pattern=@(" + DisplayString + "*)"
+                  }  
  
                    const connection = new WebSocket(server);
                    let interval: NodeJS.Timeout;
@@ -90,12 +94,35 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                    
                    connection.onmessage = (event: any) => {
 
-
-                    
                      let jsonData = JSON.parse(event.data);
                      console.log(jsonData);
-                     //let finalData = jsonData[query.server ? query.server : 0]
                      let finalData = jsonData;
+                     let hasDisplayName = "";
+
+                     hasDisplayName = Object.keys(jsonData).find(k => k.endsWith("displayName")) || "";
+
+                     //let finalData = jsonData[query.server ? query.server : 0]
+                     if(query.checked && !query.pattern && hasDisplayName === ""){
+                       finalData = []
+                       finalData[query.target || ""] = jsonData[query.target || ""];
+                     }
+
+                     if(finalData){
+                      dataField.push("timestamp")
+                      if(!isStreaming){
+                        Object.keys(finalData).forEach(function (k) {
+                          signalArray.push(k)
+                          dataField.push(k)
+                          if(query.checked && k.endsWith("displayName")){
+                           let d = {
+                             signalName : k,
+                             displayName : finalData[k].value
+                           }
+                           displayNamesData.push(d);
+                          }
+                       })
+                      }
+                    }
                      
                      console.log("finaldata" + finalData);
                      let frameData: any = [];
@@ -136,7 +163,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                               displayKey = 1;
                            }
                          })
-                         if(signalArray.length === 1 && query.displayNamesData.length === 1){
+                         if(signalArray.length === 1 && displayNamesData.length === 1){
                            displayKey = 1;
                          }
                        }  
@@ -175,13 +202,11 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                         //this.queryResponse((subscriber : any) => {
                           
                        // })
-                       }
-                         
-                      
+                       }                      
                      }
                      })
-                     if(query.checked && query.displayNamesData.length > 0){
-                       query.displayNamesData.map((sig: any) => {
+                     if(query.checked && displayNamesData.length > 0){
+                       displayNamesData.map((sig: any) => {
                          if(streamingData[sig.signalName] !== undefined){
                            let DisplayString: any = sig.signalName.split(".");
                            DisplayString.pop();
@@ -231,7 +256,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
 
                            //return observable
                        }
-                       else if(query.displayNamesData.length === 1 && signalArray.length === 1){
+                       else if(displayNamesData.length === 1 && signalArray.length === 1){
                          frameData = {};
                          let frame: any = {}
                            frame["frame"+count] = new CircularDataFrame({
@@ -280,6 +305,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                    }
          }); 
 
+       
+
         
     });
     console.log(...observables);
@@ -294,24 +321,21 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
       })
     }
 
-    async processData(pattern: string,type: string): Promise<string[]> {
-      let signalArray: any = [];
-      try{
-        await fetch(this.BaseURL + type + "/signals?pattern=" + pattern)
+    async processData(options: DataQueryRequest<MyQuery>) {
+       options.targets.map(async (target) =>  {
+        const query = defaults(target, defaultQuery);
+        query.type = query.type ? query.type : "";
+        query.pattern = getTemplateSrv().replace(query.pattern, options.scopedVars);
+       await fetch(this.BaseURL + query.type + "/signals?pattern=" + query.pattern)
         .then(response => response.json())
         .then(data => {
-          this.SelectSignal = data
-          return signalArray;
-          
+          //query.selectedSignals = data;
         })
         .catch(error =>{
-          return signalArray
+         
+          console.error(error)
         });
-      }
-      catch(ex){
-        return signalArray
-      }
-      return signalArray
+      })
       
       
     }
