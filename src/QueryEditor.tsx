@@ -9,6 +9,9 @@ import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from 'DataSource';
 import { defaultQuery, MyDataSourceOptions, MyQuery } from 'types';
 import _, {__} from 'lodash'
+import type * as CSS from 'csstype';
+
+interface Style extends CSS.Properties, CSS.PropertiesHyphen {}
 
 
    const options = [
@@ -34,6 +37,7 @@ export class QueryEditor extends PureComponent<Props> {
   variablePattern: string;
   dataType = "Log"
   editMode = false;
+  editTootTip = "Enable Edit Mode"
   //onPatternChange : (event : any) => void;
 
   state = {selectedSignals : [],editMode : false}
@@ -125,6 +129,11 @@ export class QueryEditor extends PureComponent<Props> {
   };
 
   onTextToggleChange = (event: any) => {
+    if(this.state.editMode === false){
+      this.editTootTip = "Disable Edit Mode"
+    }else{
+      this.editTootTip = "Enable Edit Mode"
+    }
     this.setState({editMode : !this.state.editMode})
     console.log(event);
 
@@ -140,23 +149,33 @@ export class QueryEditor extends PureComponent<Props> {
 
     //console.log("signals:" + this.variablePattern,newPattern)
     
+    const style:  Style = {
+      background:'#111217',
+      width: '40%'
+      
+    };
+    const Optionsstyle:  Style = {
+      width: '8%'
+    };
 
+    
 
     const { target,type,checked,alias,scale,pattern } = query;
     
         return (
           <div className="gf-form-group">
             <div className="gf-form-inline">
-            <label className="gf-form-label query-keyword width-10">Select Type</label>
+            <label className="gf-form-label query-keyword width-10">Select Log or Live</label>
             <select  className="gf-form-label"
                  value={type} 
-                 onChange={this.onDataTypeChange} >
+                 onChange={this.onDataTypeChange}
+                 style = {Optionsstyle} >
              {Options}
              </select>
              {
-              this.state.editMode && <textarea className="gf-form-input" value={target} onChange={this.onServerChange}></textarea>
+              this.state.editMode && <textarea className="gf-form-input;width:60%" style={style} value={target} onChange={this.onServerChange}></textarea>
              }
-             <label className="gf-form-label query-keyword width-10">Select Signal<button className="fal fa-edit" onClick={this.onTextToggleChange}/></label>
+             <label className="gf-form-label query-keyword width-10">Select Signal<i className="fa fa-edit" title={this.editTootTip} onClick={this.onTextToggleChange}/></label>
              {!this.state.editMode &&   
                <Select
                   className="gf-form-label"
@@ -171,7 +190,7 @@ export class QueryEditor extends PureComponent<Props> {
                   isSearchable={true}
                   placeholder= ""
                   value={target}
-                  noOptionsMessage={'No options found'}></Select>
+                  noOptionsMessage={'No signals found'}></Select>
                   }
                  
             </div>

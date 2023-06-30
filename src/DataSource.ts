@@ -53,9 +53,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
       query.pattern = getTemplateSrv().replace(query.pattern, options.scopedVars);
       query.alias = getTemplateSrv().replace(query.alias, options.scopedVars);
       query.scale = getTemplateSrv().replace(query.scale, options.scopedVars);
-      query.target = query.target ? query.target : "";
+      query.target = getTemplateSrv().replace(query.target, options.scopedVars);
      
-     
+      
       //let obser = new Observable<DataQueryResponse>();
      // const stopSignal: Subject<void> = new Subject<void>()
         
@@ -74,18 +74,22 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                    
                    let server = this.wssUrl + query.type + "?db=global" + "&signal=" + query.target;
                    if(query.pattern){
-                    server = this.wssUrl + query.type + "?db=global" + "&pattern=" + query.pattern;
+                    server = this.wssUrl + query.type + "?db=global" + "&pattern=@(" + query.pattern+ "*)";
                    }else if(query.checked){
                     let Display: any = query.target?.split(".");
                     Display.pop();
                     let DisplayString = Display.join(".");
                     server = this.wssUrl + query.type + "?db=global" + "&pattern=@(" + DisplayString + "*)"
-                  }  
- 
+                  }
+                  
+                  if(query.type === "Live"){
+
                    const connection = new WebSocket(server);
+
+
                    let interval: NodeJS.Timeout;
                   // frame.refId = query.refId;
-           
+                
                    connection.onerror = (error: any) => {
                      console.error(`WebSocket error: ${JSON.stringify(error)}`);
                      clearInterval(interval);
@@ -300,9 +304,21 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                      console.log("WebSocket closed: " + ev.reason)
                      clearInterval(interval);
                    }
+                   
                    return () => {
                      connection.close(1000, "Dashboard closed");
                    }
+                  }
+                  else{
+                    let logCount = 100
+                    subscriber.next({
+                      data: [],
+                      key: query.refId + logCount,
+                      state: LoadingState.Streaming
+                    })
+                    logCount = logCount + 1
+                    return;
+                  }
          }); 
 
        
@@ -368,15 +384,5 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
     
   }
 
-  metricFindQuery(query: any, options?: any): any {
-    console.log(query,options)
-  }
-
-  toggleEditorMode() {
-    const query = {
-      "rawQuery" : true
-    }
-
-    query.rawQuery = !query.rawQuery;
-  }
+  
 }
