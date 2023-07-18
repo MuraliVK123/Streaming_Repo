@@ -149,13 +149,29 @@ export class QueryEditor extends PureComponent<Props> {
 
     //console.log("signals:" + this.variablePattern,newPattern)
     
-    const style:  Style = {
+    const textAreaStyle:  Style = {
       background:'#111217',
       width: '40%'
       
     };
     const Optionsstyle:  Style = {
       width: '8%'
+    };
+    const patternStyle:  Style = {
+      borderStyle : 'none',
+      width: '40%'
+    };
+
+    const displayNameStyle:  Style = {
+       top: '7px'
+    };
+    const aliasStyle:  Style = {
+      width:'12%',
+      borderStyle : 'none',
+    };
+    const scaleStyle:  Style = {
+      width:'12%',
+      borderStyle : 'none',
     };
 
     
@@ -164,23 +180,22 @@ export class QueryEditor extends PureComponent<Props> {
     
         return (
           <div className="gf-form-group">
-            <div className="gf-form-inline">
+            <div className="gf-form">
             <label className="gf-form-label query-keyword width-10">Select Log or Live</label>
-            <select  className="gf-form-label"
+            <select  className="gf-form-input"
                  value={type} 
                  onChange={this.onDataTypeChange}
                  style = {Optionsstyle} >
              {Options}
              </select>
              {
-              this.state.editMode && <textarea className="gf-form-input;width:60%" style={style} value={target} onChange={this.onServerChange}></textarea>
+              this.state.editMode && <textarea className="gf-form-input;width:60%" style={textAreaStyle} value={target} onChange={this.onServerChange}></textarea>
              }
              <label className="gf-form-label query-keyword width-10">Select Signal<i className="fa fa-edit" title={this.editTootTip} onClick={this.onTextToggleChange}/></label>
              {!this.state.editMode &&   
                <Select
-                  className="gf-form-label"
+                  className="gf-form-input"
                   isMulti={false}
-                  id='signalDropdownID'
                   isClearable={true}
                   width = "auto"
                   backspaceRemovesValue={false}
@@ -195,30 +210,22 @@ export class QueryEditor extends PureComponent<Props> {
                  
             </div>
             <div className="gf-form">
-              <label className="gf-form-label query-keyword width-10">DisplayNames</label>
-              <div className="gf-form max-width-4">
-              <Switch value = {checked} onChange={this.onDisplayNameChange}/> 
-              </div>
+              <label className="gf-form-label query-keyword width-10">Display Names</label>
+               <div className="css-1so7yeh width-4" style={displayNameStyle}>
+               <Switch value = {checked} onChange={this.onDisplayNameChange} /> 
+               </div>
             </div>
             <div className="gf-form">
              <label className="gf-form-label query-keyword width-10">Alias</label>
-             <div className="gf-form max-width-8">
-             <input className="gf-form-input" value={alias} onChange={this.onAliasnameChange} placeholder="Alias" ></input>
-             </div>
+             <input className="gf-form-input" value={alias} onChange={this.onAliasnameChange} placeholder="Alias" style={aliasStyle} ></input>
             </div>
             <div className="gf-form">
               <label className="gf-form-label query-keyword width-10">Scale</label>
-              <div className="gf-form max-width-8">
-                <input className="gf-form-input" value={scale}  placeholder="Multiplier" onChange={this.onScaleChange}></input>
-            </div>
-            <div className="gf-form">
+              <input className="gf-form-input" value={scale}  placeholder="Multiplier" style={scaleStyle} onChange={this.onScaleChange}></input>
               <label className="gf-form-label query-keyword width-10">Pattern</label>
-              <div className="gf-form max-width-8">
-                  <input className="gf-form-input" value={pattern} placeholder="Redis Pattern" onChange={this.onPatternChange}></input>
-              </div>
+              <input className="gf-form-input" value={pattern} style={patternStyle} placeholder="Redis Pattern" onChange={this.onPatternChange}></input>
             </div>
-            </div>
-        </div>
+          </div>
         );
       
       

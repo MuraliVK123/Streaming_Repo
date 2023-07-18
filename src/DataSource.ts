@@ -72,23 +72,20 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                  let streamingData: any;
                  //let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
                    
-                   let server = this.wssUrl + query.type + "?db=global" + "&signal=" + query.target;
+                   let server = this.wssUrl + "Live" + "?db=global" + "&signal=" + query.target;
                    if(query.pattern){
-                    server = this.wssUrl + query.type + "?db=global" + "&pattern=@(" + query.pattern+ "*)";
+                    server = this.wssUrl + "Live" + "?db=global" + "&pattern=@(" + query.pattern+ "*)";
                    }else if(query.checked){
                     let Display: any = query.target?.split(".");
                     Display.pop();
                     let DisplayString = Display.join(".");
-                    server = this.wssUrl + query.type + "?db=global" + "&pattern=@(" + DisplayString + "*)"
+                    server = this.wssUrl + "Live" + "?db=global" + "&pattern=@(" + DisplayString + "*)"
                   }
                   
-                  if(query.type === "Live"){
 
                    const connection = new WebSocket(server);
 
-
                    let interval: NodeJS.Timeout;
-                  // frame.refId = query.refId;
                 
                    connection.onerror = (error: any) => {
                      console.error(`WebSocket error: ${JSON.stringify(error)}`);
@@ -308,17 +305,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                    return () => {
                      connection.close(1000, "Dashboard closed");
                    }
-                  }
-                  else{
-                    let logCount = 100
-                    subscriber.next({
-                      data: [],
-                      key: query.refId + logCount,
-                      state: LoadingState.Streaming
-                    })
-                    logCount = logCount + 1
-                    return;
-                  }
+                  
+                  
          }); 
 
        

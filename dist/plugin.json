@@ -1,6 +1,6 @@
 {
   "type": "datasource",
-  "name": "realtime streaming datasource",
+  "name": "OPTIMAX Streaming Datasource",
   "id": "realtime-streaming-datasource",
   "streaming": true,
   "alerting": true,
