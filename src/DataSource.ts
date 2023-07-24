@@ -72,14 +72,14 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                  let streamingData: any;
                  //let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
                    
-                   let server = this.wssUrl + "Live" + "?db=global" + "&signal=" + query.target;
+                   let server = this.wssUrl + query.type + "?db=global" + "&signal=" + query.target;
                    if(query.pattern){
-                    server = this.wssUrl + "Live" + "?db=global" + "&pattern=@(" + query.pattern+ "*)";
+                    server = this.wssUrl + query.type + "?db=global" + "&pattern=@(" + query.pattern+ "*)";
                    }else if(query.checked){
                     let Display: any = query.target?.split(".");
                     Display.pop();
                     let DisplayString = Display.join(".");
-                    server = this.wssUrl + "Live" + "?db=global" + "&pattern=@(" + DisplayString + "*)"
+                    server = this.wssUrl + query.type + "?db=global" + "&pattern=@(" + DisplayString + "*)"
                   }
                   
 
@@ -100,6 +100,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                      let finalData = jsonData;
                      let hasDisplayName = "";
 
+                      if(query.type === "Live"){
+
+                     
                      hasDisplayName = Object.keys(jsonData).find(k => k.endsWith("displayName")) || "";
 
                      //let finalData = jsonData[query.server ? query.server : 0]
@@ -155,7 +158,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                          }else{
                            frameData[sig] = value                     
                          }
-                       if(query.checked){
+                         if(query.checked){
                          let Display: any = sig.split(".");
                          Display.pop();
                          let DisplayString = Display.join(".");
@@ -203,7 +206,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                         //this.queryResponse((subscriber : any) => {
                           
                        // })
-                       }                      
+                       }
+                       
+                       
                      }
                      })
                      if(query.checked && displayNamesData.length > 0){
@@ -295,6 +300,60 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions > {
                        })
 
                      }
+                    }else{
+                        let frameData: any = finalData[0];
+                        signalArray.push(query.target)
+
+                        let logData: any = {};
+                        finalData.map((test: any)=> {
+                          Object.keys(test).forEach(function(k){
+                            logData[k] = logData[k] ? logData[k] : [];
+                            logData[k].push(test[k])
+                          })
+                        })
+                        // finalData.map((test1 : any)=> {
+                        //   logData[test1] = [];
+                        // })
+                        let count: any = 0
+                        let frame: any = {}
+                        
+                        frame["frame"+count] = new CircularDataFrame({
+                         append: 'tail',
+                        });
+                       if (frame["frame"+count].fields.length <= 1) {
+                       
+                         //first time initalize the keys from the json data
+                         Object.keys(frameData).forEach(function (k) {
+
+                           if (k === "timestamp") {
+                             frame["frame"+count].addField({ name: k, type: FieldType.time , values: logData[k] });
+                           }  
+                           else{
+                             frame["frame"+count].addField({ name: k, type:  Number(frameData[k]) >= 0 ? FieldType.number : FieldType.string , values : logData[k]});
+                           }
+                         });
+                     
+                       };
+                      // frame["frame"+count].addField(finalData);
+                        
+                      
+                         subscriber.next({
+                           data: [frame["frame"+count]],
+                           key: query.refId + count,
+                           state: LoadingState.Streaming,
+                         })
+                       
+                        count=count + 1
+
+                        //return observable
+                       //this.queryResponse((subscriber : any) => {
+                         
+                      // })
+                      
+                      
+                   
+                    
+                    }
                    };
            
                    connection.onclose = (ev: CloseEvent) => {

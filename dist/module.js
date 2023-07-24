@@ -190,15 +190,15 @@ var DataSource = /*#__PURE__*/function (_DataSourceApi) {
           var streamingData;
           //let server = "wss://10.140.133.144/api/realtime/live?db=global&signal=" + query.server || this.serverURL;
 
-          var server = _this2.wssUrl + "Live" + "?db=global" + "&signal=" + query.target;
+          var server = _this2.wssUrl + query.type + "?db=global" + "&signal=" + query.target;
           if (query.pattern) {
-            server = _this2.wssUrl + "Live" + "?db=global" + "&pattern=@(" + query.pattern + "*)";
+            server = _this2.wssUrl + query.type + "?db=global" + "&pattern=@(" + query.pattern + "*)";
           } else if (query.checked) {
             var _query$target;
             var Display = (_query$target = query.target) === null || _query$target === void 0 ? void 0 : _query$target.split(".");
             Display.pop();
             var DisplayString = Display.join(".");
-            server = _this2.wssUrl + "Live" + "?db=global" + "&pattern=@(" + DisplayString + "*)";
+            server = _this2.wssUrl + query.type + "?db=global" + "&pattern=@(" + DisplayString + "*)";
           }
           var connection = new WebSocket(server);
           var interval;
@@ -213,193 +213,245 @@ var DataSource = /*#__PURE__*/function (_DataSourceApi) {
             console.log(jsonData);
             var finalData = jsonData;
             var hasDisplayName = "";
-            hasDisplayName = Object.keys(jsonData).find(function (k) {
-              return k.endsWith("displayName");
-            }) || "";
+            if (query.type === "Live") {
+              hasDisplayName = Object.keys(jsonData).find(function (k) {
+                return k.endsWith("displayName");
+              }) || "";
 
-            //let finalData = jsonData[query.server ? query.server : 0]
-            if (query.checked && !query.pattern && hasDisplayName === "") {
-              finalData = [];
-              finalData[query.target || ""] = jsonData[query.target || ""];
-            }
-            if (finalData) {
-              dataField.push("timestamp");
-              if (!isStreaming) {
-                Object.keys(finalData).forEach(function (k) {
-                  signalArray.push(k);
-                  dataField.push(k);
-                  if (query.checked && k.endsWith("displayName")) {
-                    var d = {
-                      signalName: k,
-                      displayName: finalData[k].value
-                    };
-                    displayNamesData.push(d);
-                  }
-                });
+              //let finalData = jsonData[query.server ? query.server : 0]
+              if (query.checked && !query.pattern && hasDisplayName === "") {
+                finalData = [];
+                finalData[query.target || ""] = jsonData[query.target || ""];
               }
-            }
-            console.log("finaldata" + finalData);
-            var frameData = [];
-            var aliasName;
-            if (query.alias) {
-              aliasName = query.alias;
-            }
-            if (!isStreaming) {
-              streamingData = finalData;
-              isStreaming = true;
-            }
-            console.log("alias" + aliasName);
-            var count = 0;
-            signalArray.map(function (sig) {
-              var displayKey = 0;
-              if (sig !== "timestamp" && streamingData[sig] !== undefined) {
-                frameData = {};
-                var value = finalData[sig] === undefined ? streamingData[sig].value : finalData[sig].value;
-                frameData["timestamp"] = finalData[sig] === undefined ? streamingData[sig].timestamp : finalData[sig].timestamp;
-                if (query.scale !== undefined && Number(query.scale) > 0) {
-                  value = value * Number(query.scale);
-                }
-                if (finalData[sig] !== undefined && isStreaming) {
-                  streamingData[sig] = finalData[sig];
-                }
-                if (signalArray.length === 1 && query.alias !== undefined && aliasName !== undefined) {
-                  frameData[aliasName] = value;
-                } else {
-                  frameData[sig] = value;
-                }
-                if (query.checked) {
-                  var _Display = sig.split(".");
-                  _Display.pop();
-                  var _DisplayString = _Display.join(".");
-                  signalArray.map(function (k) {
-                    if (k === _DisplayString + ".displayName") {
-                      displayKey = 1;
+              if (finalData) {
+                dataField.push("timestamp");
+                if (!isStreaming) {
+                  Object.keys(finalData).forEach(function (k) {
+                    signalArray.push(k);
+                    dataField.push(k);
+                    if (query.checked && k.endsWith("displayName")) {
+                      var d = {
+                        signalName: k,
+                        displayName: finalData[k].value
+                      };
+                      displayNamesData.push(d);
                     }
                   });
-                  if (signalArray.length === 1 && displayNamesData.length === 1) {
-                    displayKey = 1;
-                  }
-                }
-                if (displayKey === 0) {
-                  var frame = {};
-                  frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail'
-                  });
-                  if (frame["frame" + count].fields.length <= 1) {
-                    //first time initalize the keys from the json data
-                    Object.keys(frameData).forEach(function (k) {
-                      if (k === "timestamp") {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                        });
-                      } else {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
-                        });
-                      }
-                    });
-                  }
-                  ;
-                  frame["frame" + count].add(frameData);
-                  subscriber.next({
-                    data: [frame["frame" + count]],
-                    key: query.refId + count,
-                    state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
-                  });
-                  count = count + 1;
-
-                  //return observable
-                  //this.queryResponse((subscriber : any) => {
-
-                  // })
                 }
               }
-            });
-
-            if (query.checked && displayNamesData.length > 0) {
-              displayNamesData.map(function (sig) {
-                if (streamingData[sig.signalName] !== undefined) {
-                  var _DisplayString2 = sig.signalName.split(".");
-                  _DisplayString2.pop();
-                  _DisplayString2.push("value");
-                  var displayKey = _DisplayString2.join(".");
+              console.log("finaldata" + finalData);
+              var frameData = [];
+              var aliasName;
+              if (query.alias) {
+                aliasName = query.alias;
+              }
+              if (!isStreaming) {
+                streamingData = finalData;
+                isStreaming = true;
+              }
+              console.log("alias" + aliasName);
+              var count = 0;
+              signalArray.map(function (sig) {
+                var displayKey = 0;
+                if (sig !== "timestamp" && streamingData[sig] !== undefined) {
                   frameData = {};
-                  var value = finalData[displayKey] === undefined ? streamingData[displayKey].value : finalData[displayKey].value;
-                  frameData["timestamp"] = finalData[displayKey] === undefined ? streamingData[displayKey].timestamp : finalData[displayKey].timestamp;
+                  var value = finalData[sig] === undefined ? streamingData[sig].value : finalData[sig].value;
+                  frameData["timestamp"] = finalData[sig] === undefined ? streamingData[sig].timestamp : finalData[sig].timestamp;
                   if (query.scale !== undefined && Number(query.scale) > 0) {
                     value = value * Number(query.scale);
                   }
-                  if (finalData[displayKey] !== undefined && isStreaming) {
-                    streamingData[displayKey] = finalData[displayKey];
+                  if (finalData[sig] !== undefined && isStreaming) {
+                    streamingData[sig] = finalData[sig];
                   }
-                  frameData[sig.displayName] = value;
-                  var frame = {};
-                  frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail'
-                  });
-                  if (frame["frame" + count].fields.length <= 1) {
-                    //first time initalize the keys from the json data
-                    Object.keys(frameData).forEach(function (k) {
-                      if (k === "timestamp") {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                        });
-                      } else {
-                        frame["frame" + count].addField({
-                          name: k,
-                          type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
-                        });
+                  if (signalArray.length === 1 && query.alias !== undefined && aliasName !== undefined) {
+                    frameData[aliasName] = value;
+                  } else {
+                    frameData[sig] = value;
+                  }
+                  if (query.checked) {
+                    var _Display = sig.split(".");
+                    _Display.pop();
+                    var _DisplayString = _Display.join(".");
+                    signalArray.map(function (k) {
+                      if (k === _DisplayString + ".displayName") {
+                        displayKey = 1;
                       }
                     });
+                    if (signalArray.length === 1 && displayNamesData.length === 1) {
+                      displayKey = 1;
+                    }
                   }
-                  ;
-                  frame["frame" + count].add(frameData);
-                  subscriber.next({
-                    data: [frame["frame" + count]],
-                    key: query.refId + count,
-                    state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
-                  });
-                  count = count + 1;
+                  if (displayKey === 0) {
+                    var frame = {};
+                    frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
+                      append: 'tail'
+                    });
+                    if (frame["frame" + count].fields.length <= 1) {
+                      //first time initalize the keys from the json data
+                      Object.keys(frameData).forEach(function (k) {
+                        if (k === "timestamp") {
+                          frame["frame" + count].addField({
+                            name: k,
+                            type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
+                          });
+                        } else {
+                          frame["frame" + count].addField({
+                            name: k,
+                            type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
+                          });
+                        }
+                      });
+                    }
+                    ;
+                    frame["frame" + count].add(frameData);
+                    subscriber.next({
+                      data: [frame["frame" + count]],
+                      key: query.refId + count,
+                      state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+                    });
+                    count = count + 1;
 
-                  //return observable
-                } else if (displayNamesData.length === 1 && signalArray.length === 1) {
-                  frameData = {};
-                  var _frame = {};
-                  _frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
-                    append: 'tail'
-                  });
-                  frameData["timestamp"] = finalData[signalArray[0]].timestamp;
-                  frameData[sig.displayName] = finalData[signalArray[0]].value;
-                  if (_frame["frame" + count].fields.length <= 1) {
-                    //first time initalize the keys from the json data
-                    Object.keys(frameData).forEach(function (k) {
-                      if (k === "timestamp") {
-                        _frame["frame" + count].addField({
-                          name: k,
-                          type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
-                        });
-                      } else {
-                        _frame["frame" + count].addField({
-                          name: k,
-                          type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
-                        });
-                      }
-                    });
+                    //return observable
+                    //this.queryResponse((subscriber : any) => {
+
+                    // })
                   }
-                  ;
-                  _frame["frame" + count].add(frameData);
-                  subscriber.next({
-                    data: [_frame["frame" + count]],
-                    key: query.refId + count,
-                    state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
-                  });
-                  count = count + 1;
-                  // return observable
                 }
               });
+
+              if (query.checked && displayNamesData.length > 0) {
+                displayNamesData.map(function (sig) {
+                  if (streamingData[sig.signalName] !== undefined) {
+                    var _DisplayString2 = sig.signalName.split(".");
+                    _DisplayString2.pop();
+                    _DisplayString2.push("value");
+                    var displayKey = _DisplayString2.join(".");
+                    frameData = {};
+                    var value = finalData[displayKey] === undefined ? streamingData[displayKey].value : finalData[displayKey].value;
+                    frameData["timestamp"] = finalData[displayKey] === undefined ? streamingData[displayKey].timestamp : finalData[displayKey].timestamp;
+                    if (query.scale !== undefined && Number(query.scale) > 0) {
+                      value = value * Number(query.scale);
+                    }
+                    if (finalData[displayKey] !== undefined && isStreaming) {
+                      streamingData[displayKey] = finalData[displayKey];
+                    }
+                    frameData[sig.displayName] = value;
+                    var frame = {};
+                    frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
+                      append: 'tail'
+                    });
+                    if (frame["frame" + count].fields.length <= 1) {
+                      //first time initalize the keys from the json data
+                      Object.keys(frameData).forEach(function (k) {
+                        if (k === "timestamp") {
+                          frame["frame" + count].addField({
+                            name: k,
+                            type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
+                          });
+                        } else {
+                          frame["frame" + count].addField({
+                            name: k,
+                            type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
+                          });
+                        }
+                      });
+                    }
+                    ;
+                    frame["frame" + count].add(frameData);
+                    subscriber.next({
+                      data: [frame["frame" + count]],
+                      key: query.refId + count,
+                      state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+                    });
+                    count = count + 1;
+
+                    //return observable
+                  } else if (displayNamesData.length === 1 && signalArray.length === 1) {
+                    frameData = {};
+                    var _frame = {};
+                    _frame["frame" + count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
+                      append: 'tail'
+                    });
+                    frameData["timestamp"] = finalData[signalArray[0]].timestamp;
+                    frameData[sig.displayName] = finalData[signalArray[0]].value;
+                    if (_frame["frame" + count].fields.length <= 1) {
+                      //first time initalize the keys from the json data
+                      Object.keys(frameData).forEach(function (k) {
+                        if (k === "timestamp") {
+                          _frame["frame" + count].addField({
+                            name: k,
+                            type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time
+                          });
+                        } else {
+                          _frame["frame" + count].addField({
+                            name: k,
+                            type: Number(frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string
+                          });
+                        }
+                      });
+                    }
+                    ;
+                    _frame["frame" + count].add(frameData);
+                    subscriber.next({
+                      data: [_frame["frame" + count]],
+                      key: query.refId + count,
+                      state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+                    });
+                    count = count + 1;
+                    // return observable
+                  }
+                });
+              }
+            } else {
+              var _frameData = finalData[0];
+              signalArray.push(query.target);
+              var logData = {};
+              finalData.map(function (test) {
+                Object.keys(test).forEach(function (k) {
+                  logData[k] = logData[k] ? logData[k] : [];
+                  logData[k].push(test[k]);
+                });
+              });
+              // finalData.map((test1 : any)=> {
+              //   logData[test1] = [];
+              // })
+              var _count = 0;
+              var frame = {};
+              frame["frame" + _count] = new _grafana_data__WEBPACK_IMPORTED_MODULE_1__.CircularDataFrame({
+                append: 'tail'
+              });
+              if (frame["frame" + _count].fields.length <= 1) {
+                //first time initalize the keys from the json data
+                Object.keys(_frameData).forEach(function (k) {
+                  if (k === "timestamp") {
+                    frame["frame" + _count].addField({
+                      name: k,
+                      type: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.time,
+                      values: logData[k]
+                    });
+                  } else {
+                    frame["frame" + _count].addField({
+                      name: k,
+                      type: Number(_frameData[k]) >= 0 ? _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.number : _grafana_data__WEBPACK_IMPORTED_MODULE_1__.FieldType.string,
+                      values: logData[k]
+                    });
+                  }
+                });
+              }
+              ;
+              // frame["frame"+count].addField(finalData);
+
+              subscriber.next({
+                data: [frame["frame" + _count]],
+                key: query.refId + _count,
+                state: _grafana_data__WEBPACK_IMPORTED_MODULE_1__.LoadingState.Streaming
+              });
+              _count = _count + 1;
+
+              //return observable
+              //this.queryResponse((subscriber : any) => {
+
+              // })
             }
           };
 
